@@ -14,9 +14,9 @@ namespace UnityEditor.Tilemaps
                 nameStartIndex = 2; // "P_".length
             }
 
-            if (assetName.EndsWith("Tileset"))
+            if (assetName.EndsWith("Palette"))
             {
-                nameLength = assetName.Length - nameStartIndex - 7; // "Tileset".length
+                nameLength = assetName.Length - nameStartIndex - 7; // "Palette".length
             }
 
             return assetName.Substring(nameStartIndex, nameLength);
