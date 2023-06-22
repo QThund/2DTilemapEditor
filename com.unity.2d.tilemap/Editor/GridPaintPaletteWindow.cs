@@ -195,7 +195,7 @@ namespace UnityEditor.Tilemaps
 
         private const float k_DropdownWidth = 200f;
         private const float k_ActiveTargetLabelWidth = 90f;
-        private const float k_ActiveTargetDropdownWidth = 130f;
+        private const float k_ActiveTargetDropdownWidth = 180f;
         private const float k_ActiveTargetWarningSize = 20f;
         private const float k_TopAreaHeight = 104f;
         private const float k_MinBrushInspectorHeight = 50f;
