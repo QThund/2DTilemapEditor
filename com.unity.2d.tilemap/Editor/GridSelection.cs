@@ -14,11 +14,12 @@ namespace UnityEditor.Tilemaps
         private BoundsInt m_Position;
         private GameObject m_Target;
         [SerializeField] private Object m_PreviousSelection;
+        private static Object m_activeObject;
 
         /// <summary>Whether there is an active GridSelection made on a GridLayout.</summary>
-        public static bool active { get { return Selection.activeObject is GridSelection && selection.m_Target != null; } }
+        public static bool active { get { return m_activeObject is GridSelection && selection.m_Target != null; } }
 
-        private static GridSelection selection { get { return Selection.activeObject as GridSelection; } }
+        private static GridSelection selection { get { return m_activeObject as GridSelection; } }
 
         /// <summary>The cell coordinates of the active GridSelection made on the GridLayout.</summary>
         public static BoundsInt position
@@ -47,10 +48,10 @@ namespace UnityEditor.Tilemaps
         public static void Select(Object target, BoundsInt bounds)
         {
             GridSelection newSelection = CreateInstance<GridSelection>();
-            newSelection.m_PreviousSelection = Selection.activeObject;
+            newSelection.m_PreviousSelection = m_activeObject;
             newSelection.m_Target = target as GameObject;
             newSelection.m_Position = bounds;
-            Selection.activeObject = newSelection;
+            m_activeObject = newSelection;
             if (gridSelectionChanged != null)
                 gridSelectionChanged();
         }
@@ -61,7 +62,7 @@ namespace UnityEditor.Tilemaps
             if (active)
             {
                 selection.m_Position = new BoundsInt();
-                Selection.activeObject = selection.m_PreviousSelection;
+                m_activeObject = selection.m_PreviousSelection;
                 if (gridSelectionChanged != null)
                     gridSelectionChanged();
             }
