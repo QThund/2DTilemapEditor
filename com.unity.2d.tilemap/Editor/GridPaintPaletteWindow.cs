@@ -1152,7 +1152,7 @@ namespace UnityEditor.Tilemaps
             }
             else
             {
-                GUIContent content = GUIContent.Temp(GridPalettes.palettes.Count > 0 && palette != null ? palette.name : Styles.createNewPalette.text);
+                GUIContent content = GUIContent.Temp(GridPalettes.palettes.Count > 0 && palette != null ? GridPalettesDropdown.AdaptPaletteAssetName(palette.name) : Styles.createNewPalette.text);
                 if (EditorGUI.DropdownButton(rect, content, FocusType.Passive, EditorStyles.toolbarPopup))
                 {
                     var menuData = new GridPalettesDropdown.MenuItemProvider();
