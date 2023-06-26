@@ -202,6 +202,7 @@ namespace UnityEditor.Tilemaps
         private const float k_MinClipboardHeight = 200f;
         private const float k_ToolbarHeight = 17f;
         private const float k_ResizerDragRectPadding = 10f;
+        private const float k_LayersPanelWidth = 150.0f;
         private static readonly Vector2 k_MinWindowSize = new Vector2(k_ActiveTargetLabelWidth + k_ActiveTargetDropdownWidth + k_ActiveTargetWarningSize, 200f);
 
         private PaintableSceneViewGrid m_PaintableSceneViewGrid;
@@ -462,7 +463,7 @@ namespace UnityEditor.Tilemaps
                 }
             }
         }
-
+        
         private void OnGUI()
         {
             HandleContextMenu();
@@ -477,25 +478,32 @@ namespace UnityEditor.Tilemaps
             EditorGUILayout.EndHorizontal();
             EditorGUILayout.BeginHorizontal();
             GUILayout.Space(leftMargin);
-            DoActiveTargetsGUI();
+            //DoActiveTargetsGUI();
             GUILayout.Space(leftMargin);
             EditorGUILayout.EndHorizontal();
             GUILayout.Space(6f);
             EditorGUILayout.EndVertical();
 
             EditorGUILayout.BeginVertical();
+
             Rect clipboardToolbarRect = EditorGUILayout.BeginHorizontal(GUIContent.none, Styles.ToolbarTitleStyle);
             DoClipboardHeader();
             EditorGUILayout.EndHorizontal();
+
+            float heightOfTilemapLayers = 20.0f * (GridPaintingState.validTargets.Length + TilemapLayersSettings.GetLayers().Length); // This must be subtracted to the height of the clipboard because it is drawn in a space defined by a Space call, so adding new elements, like toggles, makes the height be greater and that disarranges the elements below
             ConvertGridPrefabToPalette(clipboardToolbarRect);
-            Rect dragRect = new Rect(k_DropdownWidth + k_ResizerDragRectPadding, 0, position.width - k_DropdownWidth - k_ResizerDragRectPadding, k_ToolbarHeight);
+            // The area of the drag handler of the brush inspector
+            Rect dragRect = new Rect(k_DropdownWidth + k_ResizerDragRectPadding, -heightOfTilemapLayers, position.width - k_DropdownWidth - k_ResizerDragRectPadding, k_ToolbarHeight);
+            // The area of the brush inspector
             float brushInspectorSize = m_PreviewResizer.ResizeHandle(position, k_MinBrushInspectorHeight, k_MinClipboardHeight, k_ToolbarHeight, dragRect);
+            // The area of the tile selector / clipboard
             float clipboardHeight = position.height - brushInspectorSize - k_TopAreaHeight;
-            Rect clipboardRect = new Rect(0f, clipboardToolbarRect.yMax, position.width, clipboardHeight);
+            Rect clipboardRect = new Rect(k_LayersPanelWidth, clipboardToolbarRect.yMax, position.width - k_LayersPanelWidth, clipboardHeight);
+            DoTilemapLayersGUI(new Rect(0.0f, clipboardToolbarRect.yMax, k_LayersPanelWidth, clipboardHeight));
             OnClipboardGUI(clipboardRect);
             EditorGUILayout.EndVertical();
 
-            GUILayout.Space(clipboardRect.height);
+            GUILayout.Space(clipboardRect.height - heightOfTilemapLayers);
 
             EditorGUILayout.BeginVertical();
             EditorGUILayout.BeginHorizontal(GUIContent.none, Styles.ToolbarTitleStyle);
@@ -882,6 +890,7 @@ namespace UnityEditor.Tilemaps
 
         private void OnScenePaintTargetChanged(GameObject scenePaintTarget)
         {
+            m_haveLayersChanged = true;
             DisableFocus();
             EnableFocus();
             Repaint();
@@ -1057,9 +1066,165 @@ namespace UnityEditor.Tilemaps
             }
         }
 
+        private Vector2 m_tilemapLayersScrollViewPos = Vector2.zero;
+        private int m_cachedActiveTargetsHashCode = 0;
+        private bool m_haveLayersChanged = true;
+
+        private class TilemapLayer
+        {
+            public bool IsSelected;
+            public string Name;
+            public GameObject Target;
+            public int SortIndex;
+            public string LayerType;
+        }
+
+        private List<TilemapLayer> m_tilemapLayers = new List<TilemapLayer>();
+
+        private void DoTilemapLayersGUI(Rect panelRect)
+        {
+            TilemapLayersSettings.TilemapLayer[] layerTypes = TilemapLayersSettings.GetLayers();
+
+            // If the tilemaps hierarchy changed, rebuild the layers
+            if (GridPaintingState.validTargets.GetHashCode() != m_cachedActiveTargetsHashCode || 
+               m_haveLayersChanged)
+            {
+                m_haveLayersChanged = false;
+                m_cachedActiveTargetsHashCode = GridPaintingState.validTargets.GetHashCode();
+
+                for (int i = 0; i < m_tilemapLayers.Count; ++i)
+                {
+                    // Some tilemaps were removed from the grid
+                    if (m_tilemapLayers[i].Target == null)
+                    {
+                        if (m_tilemapLayers[i].IsSelected)
+                        {
+                            // Selects the first target by default
+                            SelectTarget(0, GridPaintingState.validTargets[0].gameObject);
+                        }
+
+                        m_tilemapLayers.RemoveAt(i);
+                        --i;
+                    }
+                }
+
+                for (int i = 0; i < GridPaintingState.validTargets.Length; ++i)
+                {
+                    bool targetWasInList = false;
+
+                    for(int j = 0; j < m_tilemapLayers.Count; ++j)
+                    {
+                        if (GridPaintingState.validTargets[i] == m_tilemapLayers[j].Target || 
+                            m_tilemapLayers[j].Target == null)
+                        {
+                            targetWasInList = true;
+                            break;
+                        }
+                    }
+
+                    // New tilemaps were added to the grid
+                    if(!targetWasInList)
+                    {
+                        int layerTypePosition = 0;
+
+                        for(; layerTypePosition < layerTypes.Length; ++layerTypePosition)
+                        {
+                            if(GridPaintingState.validTargets[i].name.StartsWith(layerTypes[layerTypePosition].Name))
+                            {
+                                break;
+                            }
+                        }
+
+                        m_tilemapLayers.Add(new TilemapLayer(){ IsSelected = false,
+                                                                Name = GridPaintingState.validTargets[i].name,
+                                                                Target = GridPaintingState.validTargets[i],
+                                                                SortIndex = layerTypePosition * 100 - GridPaintingState.validTargets[i].GetComponent<TilemapRenderer>().sortingOrder,
+                                                                LayerType = layerTypePosition < layerTypes.Length ? layerTypes[layerTypePosition].Name 
+                                                                                                                  : string.Empty });
+                    }
+                }
+
+                // Sorts all tilemap layers according to settings and their sort index
+                m_tilemapLayers.Sort((a, b) => { return a.SortIndex - b.SortIndex; });
+            }
+
+            // Draws the layer list
+            m_tilemapLayersScrollViewPos = GUI.BeginScrollView(panelRect, m_tilemapLayersScrollViewPos, panelRect);
+            {
+                EditorGUILayout.BeginVertical();
+                {
+                    // Selection according to scene hierarchy
+                    for (int i = 0; i < m_tilemapLayers.Count; ++i)
+                    {
+                        m_tilemapLayers[i].IsSelected = Selection.activeObject == m_tilemapLayers[i].Target;
+                    }
+
+                    // Tilemap type headers
+                    int layerTypeIndex = 0;
+                    string lastType = layerTypes[layerTypeIndex].Name;
+
+                    Color previousColor = GUI.backgroundColor;
+                    GUI.backgroundColor = Color.black;
+                    GUILayout.Label(layerTypes[layerTypeIndex].Name, EditorStyles.foldoutHeader);
+                    GUI.backgroundColor = previousColor;
+
+                    for (int i = 0; i < m_tilemapLayers.Count; ++i)
+                    {
+                        if (m_tilemapLayers[i].LayerType != lastType)
+                        {
+                            if (m_tilemapLayers[i].LayerType != layerTypes[layerTypeIndex].Name)
+                            {
+                                for (layerTypeIndex = layerTypeIndex + 1; layerTypeIndex < layerTypes.Length; ++layerTypeIndex)
+                                {
+                                    EditorGUILayout.BeginHorizontal(GUILayout.Width(k_LayersPanelWidth));
+                                    {
+                                        GUI.backgroundColor = Color.black;
+                                        GUILayout.Label(layerTypes[layerTypeIndex].Name, EditorStyles.foldoutHeader);
+                                        GUI.backgroundColor = previousColor;
+                                    }
+                                    EditorGUILayout.EndHorizontal();
+
+                                    if (m_tilemapLayers[i].LayerType == layerTypes[layerTypeIndex].Name)
+                                    {
+                                        // If the tilemap is of the same type, do not jump to the next type
+                                        break;
+                                    }
+
+                                    lastType = layerTypes[layerTypeIndex].Name;
+                                }
+                            }
+                        }
+
+                        bool previousStatus = m_tilemapLayers[i].IsSelected;
+
+                        EditorGUILayout.BeginHorizontal(GUILayout.Width(k_LayersPanelWidth));
+                        {
+                            // Checks for a change of selection due to clicking on layer
+                            GUI.backgroundColor = m_tilemapLayers[i].IsSelected ? Color.green : previousColor;
+                            m_tilemapLayers[i].IsSelected = GUILayout.Toggle(m_tilemapLayers[i].IsSelected, m_tilemapLayers[i].Name, EditorStyles.toolbarButtonLeft, GUILayout.Width(k_LayersPanelWidth));
+                            GUI.backgroundColor = previousColor;
+                        }
+                        EditorGUILayout.EndHorizontal();
+
+                        // New selection
+                        if (!previousStatus && m_tilemapLayers[i].IsSelected)
+                        {
+                            SelectTarget(-1, m_tilemapLayers[i].Target);
+                        }
+                    }
+                }
+                EditorGUILayout.EndVertical();
+            }
+            GUI.EndScrollView();
+        }
+
         private void SelectTarget(int i, object o)
         {
             var obj = o as GameObject;
+
+            // Selects the target in the scene
+            Selection.activeObject = obj;
+
             var isPrefabInstance = IsObjectPrefabInstance(obj);
             if (isPrefabInstance)
             {
@@ -1117,6 +1282,7 @@ namespace UnityEditor.Tilemaps
             DoPalettesDropdown();
             using (new EditorGUI.DisabledScope(palette == null))
             {
+                GUILayout.Space(k_LayersPanelWidth);
                 clipboardView.unlocked = GUILayout.Toggle(clipboardView.unlocked,
                     clipboardView.isModified ? Styles.editModified : Styles.edit,
                     EditorStyles.toolbarButton);
@@ -1143,6 +1309,7 @@ namespace UnityEditor.Tilemaps
         {
             string name = palette != null ? palette.name : Styles.createNewPalette.text;
             Rect rect = GUILayoutUtility.GetRect(GUIContent.Temp(name), EditorStyles.toolbarDropDown, Styles.dropdownOptions);
+            rect.x = k_LayersPanelWidth;
             if (GridPalettes.palettes.Count == 0)
             {
                 if (EditorGUI.DropdownButton(rect, GUIContent.Temp(name), FocusType.Passive, EditorStyles.toolbarDropDown))
