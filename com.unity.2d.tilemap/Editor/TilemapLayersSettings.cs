@@ -1,12 +1,7 @@
 using System;
+using UnityEngine;
 
-#if UNITY_EDITOR
-
-using UnityEditor;
-
-#endif
-
-namespace UnityEngine.Tilemaps
+namespace UnityEditor.Tilemaps
 {
     /// <summary>
     /// Stores the definition of the types of layer that form every grid in the project. There may be zero to many layers of each type in a grid.
