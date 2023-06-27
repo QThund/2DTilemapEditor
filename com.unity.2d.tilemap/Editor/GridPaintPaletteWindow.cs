@@ -202,7 +202,12 @@ namespace UnityEditor.Tilemaps
         private const float k_MinClipboardHeight = 200f;
         private const float k_ToolbarHeight = 17f;
         private const float k_ResizerDragRectPadding = 10f;
-        private const float k_LayersPanelWidth = 150.0f;
+        private const float k_LayersPanelWidth = 150.0f + 20.0f * 2.0f;
+        private const float k_TilemapLayerHeaderButtonWidth = 20.0f;
+        private static readonly GUIContent k_NewLayerAtTopButtonText = new GUIContent("T");
+        private static readonly GUIContent k_NewLayerAtBottomButtonText = new GUIContent("B");
+        private static readonly GUIContent k_MoveLayerUpButtonText = new GUIContent("^");
+        private static readonly GUIContent k_MoveLayerDownButtonText = new GUIContent("v");
         private static readonly Vector2 k_MinWindowSize = new Vector2(k_ActiveTargetLabelWidth + k_ActiveTargetDropdownWidth + k_ActiveTargetWarningSize, 200f);
 
         private PaintableSceneViewGrid m_PaintableSceneViewGrid;
@@ -890,7 +895,6 @@ namespace UnityEditor.Tilemaps
 
         private void OnScenePaintTargetChanged(GameObject scenePaintTarget)
         {
-            m_haveLayersChanged = true;
             DisableFocus();
             EnableFocus();
             Repaint();
@@ -1068,13 +1072,11 @@ namespace UnityEditor.Tilemaps
 
         private Vector2 m_tilemapLayersScrollViewPos = Vector2.zero;
         private int m_cachedActiveTargetsHashCode = 0;
-        private bool m_haveLayersChanged = true;
 
         private class TilemapLayer
         {
             public bool IsSelected;
-            public string Name;
-            public GameObject Target;
+            public TilemapRenderer TilemapInstance;
             public int SortIndex;
             public string LayerType;
         }
@@ -1086,16 +1088,14 @@ namespace UnityEditor.Tilemaps
             TilemapLayersSettings.TilemapLayer[] layerTypes = TilemapLayersSettings.GetLayers();
 
             // If the tilemaps hierarchy changed, rebuild the layers
-            if (GridPaintingState.validTargets.GetHashCode() != m_cachedActiveTargetsHashCode || 
-               m_haveLayersChanged)
+            if (GridPaintingState.validTargets.GetHashCode() != m_cachedActiveTargetsHashCode)
             {
-                m_haveLayersChanged = false;
                 m_cachedActiveTargetsHashCode = GridPaintingState.validTargets.GetHashCode();
 
                 for (int i = 0; i < m_tilemapLayers.Count; ++i)
                 {
                     // Some tilemaps were removed from the grid
-                    if (m_tilemapLayers[i].Target == null)
+                    if (m_tilemapLayers[i].TilemapInstance == null)
                     {
                         if (m_tilemapLayers[i].IsSelected)
                         {
@@ -1114,8 +1114,8 @@ namespace UnityEditor.Tilemaps
 
                     for(int j = 0; j < m_tilemapLayers.Count; ++j)
                     {
-                        if (GridPaintingState.validTargets[i] == m_tilemapLayers[j].Target || 
-                            m_tilemapLayers[j].Target == null)
+                        if (m_tilemapLayers[j].TilemapInstance == null || 
+                            GridPaintingState.validTargets[i] == m_tilemapLayers[j].TilemapInstance.gameObject)
                         {
                             targetWasInList = true;
                             break;
@@ -1136,8 +1136,7 @@ namespace UnityEditor.Tilemaps
                         }
 
                         m_tilemapLayers.Add(new TilemapLayer(){ IsSelected = false,
-                                                                Name = GridPaintingState.validTargets[i].name,
-                                                                Target = GridPaintingState.validTargets[i],
+                                                                TilemapInstance = GridPaintingState.validTargets[i].GetComponent<TilemapRenderer>(),
                                                                 SortIndex = layerTypePosition * 100 - GridPaintingState.validTargets[i].GetComponent<TilemapRenderer>().sortingOrder,
                                                                 LayerType = layerTypePosition < layerTypes.Length ? layerTypes[layerTypePosition].Name 
                                                                                                                   : string.Empty });
@@ -1146,6 +1145,8 @@ namespace UnityEditor.Tilemaps
 
                 // Sorts all tilemap layers according to settings and their sort index
                 m_tilemapLayers.Sort((a, b) => { return a.SortIndex - b.SortIndex; });
+
+                Debug.Log("Layers changed. List rebuilt.");
             }
 
             // Draws the layer list
@@ -1156,7 +1157,7 @@ namespace UnityEditor.Tilemaps
                     // Selection according to scene hierarchy
                     for (int i = 0; i < m_tilemapLayers.Count; ++i)
                     {
-                        m_tilemapLayers[i].IsSelected = Selection.activeObject == m_tilemapLayers[i].Target;
+                        m_tilemapLayers[i].IsSelected = Selection.activeObject == m_tilemapLayers[i].TilemapInstance.gameObject;
                     }
 
                     // Tilemap type headers
@@ -1181,6 +1182,68 @@ namespace UnityEditor.Tilemaps
                                         GUI.backgroundColor = Color.black;
                                         GUILayout.Label(layerTypes[layerTypeIndex].Name, EditorStyles.foldoutHeader);
                                         GUI.backgroundColor = previousColor;
+
+                                        Rect labelRect = GUILayoutUtility.GetLastRect();
+                                        Rect buttonRect = new Rect(labelRect.x + labelRect.width - k_TilemapLayerHeaderButtonWidth * 2.0f,
+                                                                   labelRect.y,
+                                                                   k_TilemapLayerHeaderButtonWidth,
+                                                                   labelRect.height);
+
+                                        // Add new layer at the top
+                                        if (EditorGUI.Button(buttonRect, k_NewLayerAtTopButtonText))
+                                        {
+                                            //Undo.RecordObject(m_tilemapLayers[i].TilemapInstance.transform.parent.gameObject, "Tilemap layer added");
+                                            EditorUtility.SetDirty(m_tilemapLayers[i].TilemapInstance.transform.parent.gameObject);
+
+                                            GameObject newTilemap = Instantiate(layerTypes[layerTypeIndex].LayerPrefab, GridPaintingState.validTargets[0].transform.parent);
+                                            TilemapLayer newLayer = new TilemapLayer() 
+                                                                        { 
+                                                                            IsSelected = false,
+                                                                            TilemapInstance = newTilemap.GetComponent<TilemapRenderer>(),
+                                                                            LayerType = layerTypes[layerTypeIndex].Name
+                                                                        };
+
+                                            for(int k = 0; k < m_tilemapLayers.Count; ++k)
+                                            {
+                                                if(m_tilemapLayers[k].LayerType == layerTypes[layerTypeIndex].Name)
+                                                {
+                                                    newLayer.TilemapInstance.sortingOrder = m_tilemapLayers[k].TilemapInstance.sortingOrder + 1;
+                                                    newLayer.SortIndex = m_tilemapLayers[k].SortIndex - 1;
+                                                    newLayer.TilemapInstance.name = layerTypes[layerTypeIndex].Name + "_" + newLayer.TilemapInstance.sortingOrder;
+                                                    m_tilemapLayers.Insert(k, newLayer);
+                                                    break;
+                                                }
+                                            }
+                                        }
+
+                                        buttonRect.x = labelRect.x + labelRect.width - k_TilemapLayerHeaderButtonWidth;
+
+                                        // Add new layer at the bottom
+                                        if (EditorGUI.Button(buttonRect, k_NewLayerAtBottomButtonText))
+                                        {
+                                            //Undo.RecordObject(m_tilemapLayers[i].TilemapInstance.transform.parent.gameObject, "Tilemap layer added");
+                                            EditorUtility.SetDirty(m_tilemapLayers[i].TilemapInstance.transform.parent.gameObject);
+
+                                            GameObject newTilemap = Instantiate(layerTypes[layerTypeIndex].LayerPrefab, GridPaintingState.validTargets[0].transform.parent);
+                                            TilemapLayer newLayer = new TilemapLayer()
+                                                                    {
+                                                                        IsSelected = false,
+                                                                        TilemapInstance = newTilemap.GetComponent<TilemapRenderer>(),
+                                                                        LayerType = layerTypes[layerTypeIndex].Name
+                                                                    };
+
+                                            for (int k = m_tilemapLayers.Count - 1; k >= 0; --k)
+                                            {
+                                                if (m_tilemapLayers[k].LayerType == layerTypes[layerTypeIndex].Name)
+                                                {
+                                                    newLayer.TilemapInstance.sortingOrder = m_tilemapLayers[k].TilemapInstance.sortingOrder - 1;
+                                                    newLayer.SortIndex = m_tilemapLayers[k].SortIndex + 1;
+                                                    newLayer.TilemapInstance.name = layerTypes[layerTypeIndex].Name + "_" + newLayer.TilemapInstance.sortingOrder;
+                                                    m_tilemapLayers.Insert(k + 1, newLayer);
+                                                    break;
+                                                }
+                                            }
+                                        }
                                     }
                                     EditorGUILayout.EndHorizontal();
 
@@ -1201,15 +1264,56 @@ namespace UnityEditor.Tilemaps
                         {
                             // Checks for a change of selection due to clicking on layer
                             GUI.backgroundColor = m_tilemapLayers[i].IsSelected ? Color.green : previousColor;
-                            m_tilemapLayers[i].IsSelected = GUILayout.Toggle(m_tilemapLayers[i].IsSelected, m_tilemapLayers[i].Name, EditorStyles.toolbarButtonLeft, GUILayout.Width(k_LayersPanelWidth));
+                            m_tilemapLayers[i].IsSelected = GUILayout.Toggle(m_tilemapLayers[i].IsSelected, m_tilemapLayers[i].TilemapInstance.name, EditorStyles.toolbarButtonLeft, GUILayout.Width(k_LayersPanelWidth - k_TilemapLayerHeaderButtonWidth * 2.0f));
                             GUI.backgroundColor = previousColor;
+
+                            Rect labelRect = GUILayoutUtility.GetLastRect();
+                            Rect listItemRect = labelRect;
+                            listItemRect.width += k_TilemapLayerHeaderButtonWidth * 2.0f;
+
+                            if (m_tilemapLayers[i].IsSelected)
+                            {
+                                listItemRect.x += labelRect.width;
+                                listItemRect.width -= labelRect.width;
+
+                                GUI.backgroundColor = m_tilemapLayers[i].IsSelected ? Color.green : previousColor;
+                                EditorGUI.LabelField(listItemRect, string.Empty, EditorStyles.toolbarButtonLeft);
+                                GUI.backgroundColor = previousColor;
+
+                                Rect buttonRect = new Rect(labelRect.x + labelRect.width,
+                                                       labelRect.y,
+                                                       k_TilemapLayerHeaderButtonWidth,
+                                                       labelRect.height);
+
+                                if (EditorGUI.Button(buttonRect, k_MoveLayerUpButtonText))
+                                {
+                                    //Undo.RecordObjects(new Object[]{ m_tilemapLayers[i].TilemapInstance.gameObject, m_tilemapLayers[i].TilemapInstance }, "Tilemap layer order change");
+                                    EditorUtility.SetDirty(m_tilemapLayers[i].TilemapInstance.gameObject);
+                                    m_tilemapLayers[i].TilemapInstance.sortingOrder = m_tilemapLayers[i].TilemapInstance.sortingOrder + 1;
+                                    m_tilemapLayers[i].SortIndex--;
+                                    m_tilemapLayers[i].TilemapInstance.name = m_tilemapLayers[i].LayerType + "_" + m_tilemapLayers[i].TilemapInstance.sortingOrder;
+                                    m_cachedActiveTargetsHashCode = 0;
+                                }
+
+                                buttonRect.x = labelRect.x + labelRect.width + k_TilemapLayerHeaderButtonWidth;
+
+                                if (EditorGUI.Button(buttonRect, k_MoveLayerDownButtonText))
+                                {
+                                    //Undo.RecordObjects(new Object[]{ m_tilemapLayers[i].TilemapInstance.gameObject, m_tilemapLayers[i].TilemapInstance }, "Tilemap layer order change");
+                                    EditorUtility.SetDirty(m_tilemapLayers[i].TilemapInstance.gameObject);
+                                    m_tilemapLayers[i].TilemapInstance.sortingOrder = m_tilemapLayers[i].TilemapInstance.sortingOrder - 1;
+                                    m_tilemapLayers[i].SortIndex++;
+                                    m_tilemapLayers[i].TilemapInstance.name = m_tilemapLayers[i].LayerType + "_" + m_tilemapLayers[i].TilemapInstance.sortingOrder;
+                                    m_cachedActiveTargetsHashCode = 0;
+                                }
+                            }
                         }
                         EditorGUILayout.EndHorizontal();
 
                         // New selection
                         if (!previousStatus && m_tilemapLayers[i].IsSelected)
                         {
-                            SelectTarget(-1, m_tilemapLayers[i].Target);
+                            SelectTarget(-1, m_tilemapLayers[i].TilemapInstance.gameObject);
                         }
                     }
                 }
