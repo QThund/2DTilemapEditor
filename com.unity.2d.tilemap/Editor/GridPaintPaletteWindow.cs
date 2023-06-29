@@ -204,10 +204,13 @@ namespace UnityEditor.Tilemaps
         private const float k_ResizerDragRectPadding = 10f;
         private const float k_LayersPanelWidth = 150.0f + 20.0f * 2.0f;
         private const float k_TilemapLayerHeaderButtonWidth = 20.0f;
-        private static readonly GUIContent k_NewLayerAtTopButtonText = new GUIContent("T");
-        private static readonly GUIContent k_NewLayerAtBottomButtonText = new GUIContent("B");
-        private static readonly GUIContent k_MoveLayerUpButtonText = new GUIContent("^");
-        private static readonly GUIContent k_MoveLayerDownButtonText = new GUIContent("v");
+        private static readonly GUIContent k_NewLayerAtTopButtonText = new GUIContent("T", "Inserts a new tilemap layer instance at the top of the layer group of this type.");
+        private static readonly GUIContent k_NewLayerAtBottomButtonText = new GUIContent("B", "Inserts a new tilemap layer instance at the bottom of the layer group of this type.");
+        private static readonly GUIContent k_MoveLayerUpButtonText = new GUIContent("^", "Increases the sorting order in layer index of the tilemap, moving it upwards in the list.");
+        private static readonly GUIContent k_MoveLayerDownButtonText = new GUIContent("v", "Reduces the sorting order in layer index of the tilemap, moving it downwards in the list.");
+        private static readonly GUIContent k_CreateLayerButtonText = new GUIContent("Create layer", "Creates the instance of a new tilemap layer of the type and with the sorting index determined by the selected tile.");
+        private static readonly GUIContent k_SelectTileButtonText = new GUIContent("Select tile asset", "Selects the asset of the selected tile and shows it in the inspector.");
+        private static readonly GUIContent k_TileLayerSelectionToggleText = new GUIContent("Tile's layer selection", "When enabled, selecting a tile will automatically focus the layer described in the tile, if it exists.");
         private static readonly Vector2 k_MinWindowSize = new Vector2(k_ActiveTargetLabelWidth + k_ActiveTargetDropdownWidth + k_ActiveTargetWarningSize, 200f);
 
         private PaintableSceneViewGrid m_PaintableSceneViewGrid;
@@ -441,6 +444,9 @@ namespace UnityEditor.Tilemaps
             }
         }
 
+        private TileBase m_previousActiveTile = null;
+        private bool m_enableTileLayerSelection = true;
+
         private void OnSelectionChange()
         {
             // Update active palette if user has selected a palette prefab
@@ -505,7 +511,41 @@ namespace UnityEditor.Tilemaps
             float clipboardHeight = position.height - brushInspectorSize - k_TopAreaHeight;
             Rect clipboardRect = new Rect(k_LayersPanelWidth, clipboardToolbarRect.yMax, position.width - k_LayersPanelWidth, clipboardHeight);
             DoTilemapLayersGUI(new Rect(0.0f, clipboardToolbarRect.yMax, k_LayersPanelWidth, clipboardHeight));
+
+            // Note: Logic and visual representation is split due to the mouse inputs are handled by the first drawn element. The toggle is drawn, then the clipboard is drawn over it, then the toggle is drawn again (without logic) just to make it visible
+            // Tile layer selection toggle
+            Rect tileLayerSelectionToggleRect = DoTileLayerSelectionToggleLogic(clipboardRect);
+            // Select tile asset button
+            Rect selectTileButtonRect = DoSelectTileAssetButtonLogic(tileLayerSelectionToggleRect);
+
+            int tileLayerIndex = -1;
+            bool tileLayerExists = GetTileLayerIndex(clipboardView.activeTile as CustomDefaultTile, out tileLayerIndex);
+
+            // Create new layer button
+            Rect createLayerButtonRect = new Rect();
+
+            if (!tileLayerExists && clipboardView.activeTile != null)
+            {
+                createLayerButtonRect = DoCreateTileLayerButtonLogic(selectTileButtonRect, tileLayerIndex);
+            }
+
+            // If enabled, it selects the layer of the tile when selected
+            if (m_enableTileLayerSelection && CheckNewTileSelected() && tileLayerIndex >= 0)
+            {
+                SelectTarget(-1, m_tilemapLayers[tileLayerIndex].TilemapInstance.gameObject);
+            }
+
+            // Draws the grid
             OnClipboardGUI(clipboardRect);
+
+            DoTileLayerSelectionToggleVisualRepresentation(tileLayerSelectionToggleRect);
+            DoSelectTileAssetButtonVisualRepresentation(selectTileButtonRect);
+
+            if (!tileLayerExists)
+            {
+                DoCreateTileLayerButtonVisualRepresentation(createLayerButtonRect);
+            }
+
             EditorGUILayout.EndVertical();
 
             GUILayout.Space(clipboardRect.height - heightOfTilemapLayers);
@@ -540,6 +580,144 @@ namespace UnityEditor.Tilemaps
             // Release keyboard focus on click to empty space
             if (Event.current.type == EventType.MouseDown)
                 GUIUtility.keyboardControl = 0;
+        }
+
+        private bool CheckNewTileSelected()
+        {
+            bool wasTileSelected = false;
+
+            if (m_previousActiveTile != clipboardView.activeTile as CustomDefaultTile)
+            {
+                // A new tile was selected
+                m_previousActiveTile = clipboardView.activeTile;
+
+                wasTileSelected = true;
+            }
+
+            return wasTileSelected;
+        }
+
+        // Returns true if the layer of the tile exists
+        private bool GetTileLayerIndex(CustomDefaultTile activeTile, out int layerIndex)
+        {
+            bool showCreateLayerButton = activeTile != null;
+            int activeTileSortingIndex = 0;
+
+            if (activeTile != null)
+            {
+                // Checks whether the layer of the tile exists and, otherwise, in which position should it be inserted if created
+                activeTileSortingIndex = CalculateLayerSortingIndex(activeTile.TilemapLayerIndex, activeTile.SortingOrderInLayer);
+
+                for (int i = 0; i < m_tilemapLayers.Count; ++i)
+                {
+                    if (m_tilemapLayers[i].SortIndex == activeTileSortingIndex)
+                    {
+                        layerIndex = i;
+                        return true;
+                    }
+                    else if (m_tilemapLayers[i].SortIndex > activeTileSortingIndex)
+                    {
+                        layerIndex = i;
+                        return false;
+                    }
+                }
+            }
+
+            layerIndex = -1;
+            return false;
+        }
+
+        private int CalculateLayerSortingIndex(int layerTypeIndex, int sortingOrderInLayer)
+        {
+            return layerTypeIndex * 100 - sortingOrderInLayer;
+        }
+
+        private Rect DoCreateTileLayerButtonLogic(Rect position, int newLayerInsertionIndex)
+        {
+            CustomDefaultTile activeTile = clipboardView.activeTile as CustomDefaultTile;
+
+            Rect createLayerButtonRect = position;
+            createLayerButtonRect.y += 20.0f;
+            createLayerButtonRect.width = 120.0f;
+
+            if (EditorGUI.Button(createLayerButtonRect, k_CreateLayerButtonText))
+            {
+                string layerTypeName = TilemapLayersSettings.GetLayers()[activeTile.TilemapLayerIndex].Name;
+
+                TilemapRenderer tilemapRenderer = Instantiate(TilemapLayersSettings.GetLayers()[activeTile.TilemapLayerIndex].LayerPrefab, m_tilemapLayers[0].TilemapInstance.transform.parent).GetComponent<TilemapRenderer>();
+                tilemapRenderer.name = layerTypeName + "_" + activeTile.SortingOrderInLayer;
+                tilemapRenderer.sortingOrder = activeTile.SortingOrderInLayer;
+
+                TilemapLayer newLayer = new TilemapLayer()
+                                            {
+                                                IsSelected = false,
+                                                TilemapInstance = tilemapRenderer,
+                                                LayerType = layerTypeName,
+                                                SortIndex = CalculateLayerSortingIndex(activeTile.TilemapLayerIndex, activeTile.SortingOrderInLayer)
+                                            };
+                m_tilemapLayers.Insert(newLayerInsertionIndex, newLayer);
+                SelectTarget(-1, tilemapRenderer.gameObject);
+                Debug.Log("Layer created.");
+            }
+
+            return createLayerButtonRect;
+        }
+
+        private void DoCreateTileLayerButtonVisualRepresentation(Rect position)
+        {
+            Color previousColor = GUI.backgroundColor;
+            GUI.backgroundColor = Color.red;
+            if (EditorGUI.Button(position, k_CreateLayerButtonText))
+            {
+            }
+
+            GUI.backgroundColor = previousColor;
+        }
+
+        private Rect DoTileLayerSelectionToggleLogic(Rect position)
+        {
+            Rect tileLayerSelectionToggleRect = position;
+            tileLayerSelectionToggleRect.width = 120.0f;
+            tileLayerSelectionToggleRect.height = 20.0f;
+
+            m_enableTileLayerSelection = EditorGUI.ToggleLeft(tileLayerSelectionToggleRect, k_TileLayerSelectionToggleText, m_enableTileLayerSelection);
+
+            return tileLayerSelectionToggleRect;
+        }
+
+        private void DoTileLayerSelectionToggleVisualRepresentation(Rect position)
+        {
+            Color previousColor = GUI.backgroundColor;
+            GUI.backgroundColor = Color.cyan;
+            EditorGUIUtility.labelWidth = position.width;
+            EditorGUI.Toggle(position, string.Empty, m_enableTileLayerSelection, EditorStyles.toolbarButtonLeft);
+            EditorGUI.Toggle(position, k_TileLayerSelectionToggleText, m_enableTileLayerSelection);
+            GUI.backgroundColor = previousColor;
+        }
+
+        private Rect DoSelectTileAssetButtonLogic(Rect position)
+        {
+            Rect selectTileButtonRect = position;
+            selectTileButtonRect.y += 20.0f;
+            selectTileButtonRect.width = 120.0f;
+            selectTileButtonRect.height = 20.0f;
+
+            if (clipboardView.activeTile != null &&
+                EditorGUI.Button(selectTileButtonRect, k_SelectTileButtonText))
+            {
+                Selection.activeObject = clipboardView.activeTile;
+                EditorApplication.ExecuteMenuItem("Window/General/Inspector");
+            }
+
+            return selectTileButtonRect;
+        }
+
+        private void DoSelectTileAssetButtonVisualRepresentation(Rect position)
+        {
+            if (clipboardView.activeTile != null &&
+                EditorGUI.Button(position, k_SelectTileButtonText))
+            {
+            }
         }
 
         static void DoTilemapToolbar()
@@ -1137,7 +1315,7 @@ namespace UnityEditor.Tilemaps
 
                         m_tilemapLayers.Add(new TilemapLayer(){ IsSelected = false,
                                                                 TilemapInstance = GridPaintingState.validTargets[i].GetComponent<TilemapRenderer>(),
-                                                                SortIndex = layerTypePosition * 100 - GridPaintingState.validTargets[i].GetComponent<TilemapRenderer>().sortingOrder,
+                                                                SortIndex = CalculateLayerSortingIndex(layerTypePosition, GridPaintingState.validTargets[i].GetComponent<TilemapRenderer>().sortingOrder),
                                                                 LayerType = layerTypePosition < layerTypes.Length ? layerTypes[layerTypePosition].Name 
                                                                                                                   : string.Empty });
                     }
