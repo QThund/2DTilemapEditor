@@ -524,7 +524,7 @@ namespace UnityEditor.Tilemaps
             // Create new layer button
             Rect createLayerButtonRect = new Rect();
 
-            if (!tileLayerExists && clipboardView.activeTile != null)
+            if (!tileLayerExists && tileLayerIndex >= 0)
             {
                 createLayerButtonRect = DoCreateTileLayerButtonLogic(selectTileButtonRect, tileLayerIndex);
             }
