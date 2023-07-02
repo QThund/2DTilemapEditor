@@ -1459,19 +1459,16 @@ namespace UnityEditor.Tilemaps
                     }
 
                     // Tilemap type headers
-                    int layerTypeIndex = 0;
-                    string lastType = layerTypes[layerTypeIndex].Name;
+                    int layerTypeIndex = -1;
+                    string lastType = string.Empty;
 
                     Color previousColor = GUI.backgroundColor;
-                    GUI.backgroundColor = Color.black;
-                    GUILayout.Label(layerTypes[layerTypeIndex].Name, EditorStyles.foldoutHeader);
-                    GUI.backgroundColor = previousColor;
 
                     for (int i = 0; i < m_tilemapLayers.Count; ++i)
                     {
                         if (m_tilemapLayers[i].LayerType != lastType)
                         {
-                            if (m_tilemapLayers[i].LayerType != layerTypes[layerTypeIndex].Name)
+                            if (layerTypeIndex < 0 || m_tilemapLayers[i].LayerType != layerTypes[layerTypeIndex].Name)
                             {
                                 for (layerTypeIndex = layerTypeIndex + 1; layerTypeIndex < layerTypes.Length; ++layerTypeIndex)
                                 {
