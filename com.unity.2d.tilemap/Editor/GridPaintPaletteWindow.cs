@@ -126,6 +126,13 @@ namespace UnityEditor.Tilemaps
 
             public static readonly GUILayoutOption[] dropdownOptions = { GUILayout.Width(k_DropdownWidth) };
 
+            public static readonly GUIContent newLayerAtTopButtonText = EditorGUIUtility.TrTextContent("T", "Inserts a new tilemap layer instance at the top of the layer group of this type.");
+            public static readonly GUIContent newLayerAtBottomButtonText = EditorGUIUtility.TrTextContent("B", "Inserts a new tilemap layer instance at the bottom of the layer group of this type.");
+            public static readonly GUIContent moveLayerUpButtonText = EditorGUIUtility.TrTextContent("^", "Increases the sorting order in layer index of the tilemap, moving it upwards in the list.");
+            public static readonly GUIContent moveLayerDownButtonText = EditorGUIUtility.TrTextContent("v", "Reduces the sorting order in layer index of the tilemap, moving it downwards in the list.");
+            public static readonly GUIContent createLayerButtonText = EditorGUIUtility.TrTextContent("Create layer", "Creates the instance of a new tilemap layer of the type and with the sorting index determined by the selected tile.");
+            public static readonly GUIContent selectTileButtonText = EditorGUIUtility.TrTextContent("Select tile asset", "Selects the asset of the selected tile and shows it in the inspector.");
+            public static readonly GUIContent tileLayerSelectionToggleText = EditorGUIUtility.TrTextContent("Tile's layer selection", "When enabled, selecting a tile will automatically focus the layer described in the tile, if it exists.");
             public static readonly GUIContent setPaletteIcon = EditorGUIUtility.TrTextContent("Set palette icon", "Stores the sprite of the selected tile as the icon of the current palette.");
         }
 
@@ -206,13 +213,6 @@ namespace UnityEditor.Tilemaps
         private const float k_ResizerDragRectPadding = 10f;
         private const float k_LayersPanelWidth = 150.0f + 20.0f * 2.0f;
         private const float k_TilemapLayerHeaderButtonWidth = 20.0f;
-        private static readonly GUIContent k_NewLayerAtTopButtonText = new GUIContent("T", "Inserts a new tilemap layer instance at the top of the layer group of this type.");
-        private static readonly GUIContent k_NewLayerAtBottomButtonText = new GUIContent("B", "Inserts a new tilemap layer instance at the bottom of the layer group of this type.");
-        private static readonly GUIContent k_MoveLayerUpButtonText = new GUIContent("^", "Increases the sorting order in layer index of the tilemap, moving it upwards in the list.");
-        private static readonly GUIContent k_MoveLayerDownButtonText = new GUIContent("v", "Reduces the sorting order in layer index of the tilemap, moving it downwards in the list.");
-        private static readonly GUIContent k_CreateLayerButtonText = new GUIContent("Create layer", "Creates the instance of a new tilemap layer of the type and with the sorting index determined by the selected tile.");
-        private static readonly GUIContent k_SelectTileButtonText = new GUIContent("Select tile asset", "Selects the asset of the selected tile and shows it in the inspector.");
-        private static readonly GUIContent k_TileLayerSelectionToggleText = new GUIContent("Tile's layer selection", "When enabled, selecting a tile will automatically focus the layer described in the tile, if it exists.");
         private static readonly Vector2 k_MinWindowSize = new Vector2(k_ActiveTargetLabelWidth + k_ActiveTargetDropdownWidth + k_ActiveTargetWarningSize, 200f);
 
         private PaintableSceneViewGrid m_PaintableSceneViewGrid;
@@ -446,8 +446,26 @@ namespace UnityEditor.Tilemaps
             }
         }
 
+        // Tile selection data
         private TileBase m_previousActiveTile = null;
         private bool m_enableTileLayerSelection = true;
+
+        // Tilemap layers data
+        private Vector2 m_tilemapLayersScrollViewPos = Vector2.zero;
+        private int m_cachedActiveTargetsHashCode = 0;
+
+        private class TilemapLayer
+        {
+            public bool IsSelected;
+            public TilemapRenderer TilemapInstance;
+            public int SortIndex;
+            public string LayerType;
+        }
+
+        private List<TilemapLayer> m_tilemapLayers = new List<TilemapLayer>();
+
+        // Palette selection data
+        Vector2 m_paletteScrollView = Vector2.zero;
 
         private void OnSelectionChange()
         {
@@ -753,7 +771,7 @@ namespace UnityEditor.Tilemaps
             createLayerButtonRect.y += 20.0f;
             createLayerButtonRect.width = 120.0f;
 
-            if (EditorGUI.Button(createLayerButtonRect, k_CreateLayerButtonText))
+            if (EditorGUI.Button(createLayerButtonRect, Styles.createLayerButtonText))
             {
                 string layerTypeName = TilemapLayersSettings.GetLayers()[activeTile.TilemapLayerIndex].Name;
 
@@ -780,7 +798,7 @@ namespace UnityEditor.Tilemaps
         {
             Color previousColor = GUI.backgroundColor;
             GUI.backgroundColor = Color.red;
-            if (EditorGUI.Button(buttonPosition, k_CreateLayerButtonText))
+            if (EditorGUI.Button(buttonPosition, Styles.createLayerButtonText))
             {
             }
 
@@ -797,14 +815,14 @@ namespace UnityEditor.Tilemaps
             tileLayerSelectionToggleRect.width = 140.0f;
             tileLayerSelectionToggleRect.height = 20.0f;
 
-            m_enableTileLayerSelection = EditorGUI.ToggleLeft(tileLayerSelectionToggleRect, k_TileLayerSelectionToggleText, m_enableTileLayerSelection);
+            m_enableTileLayerSelection = EditorGUI.ToggleLeft(tileLayerSelectionToggleRect, Styles.tileLayerSelectionToggleText, m_enableTileLayerSelection);
 
             return tileLayerSelectionToggleRect;
         }
 
         private void DoTileLayerSelectionToggleVisualRepresentation(Rect buttonPosition)
         {
-            EditorGUI.ToggleLeft(buttonPosition, k_TileLayerSelectionToggleText, m_enableTileLayerSelection, EditorStyles.toolbarButton);
+            EditorGUI.ToggleLeft(buttonPosition, Styles.tileLayerSelectionToggleText, m_enableTileLayerSelection, EditorStyles.toolbarButton);
         }
 
         private Rect DoSelectTileAssetButtonLogic(Rect buttonPosition)
@@ -815,7 +833,7 @@ namespace UnityEditor.Tilemaps
             selectTileButtonRect.height = 20.0f;
 
             if (clipboardView.activeTile != null &&
-                EditorGUI.Button(selectTileButtonRect, k_SelectTileButtonText))
+                EditorGUI.Button(selectTileButtonRect, Styles.selectTileButtonText))
             {
                 Selection.activeObject = clipboardView.activeTile;
                 EditorApplication.ExecuteMenuItem("Window/General/Inspector");
@@ -827,7 +845,7 @@ namespace UnityEditor.Tilemaps
         private void DoSelectTileAssetButtonVisualRepresentation(Rect buttonPosition)
         {
             if (clipboardView.activeTile != null &&
-                EditorGUI.Button(buttonPosition, k_SelectTileButtonText))
+                EditorGUI.Button(buttonPosition, Styles.selectTileButtonText))
             {
             }
         }
@@ -1338,7 +1356,7 @@ namespace UnityEditor.Tilemaps
                 GridPaintingState.scenePaintTarget = prefabTarget;
             }
         }
-
+        /*
         private void DoActiveTargetsGUI()
         {
             using (new EditorGUI.DisabledScope(GridPaintingState.validTargets == null || GridPaintingState.scenePaintTarget == null))
@@ -1359,20 +1377,7 @@ namespace UnityEditor.Tilemaps
                     GUILayout.Label(Styles.prefabWarningIcon, GUILayout.Width(k_ActiveTargetWarningSize), GUILayout.Height(k_ActiveTargetWarningSize));
             }
         }
-
-        private Vector2 m_tilemapLayersScrollViewPos = Vector2.zero;
-        private int m_cachedActiveTargetsHashCode = 0;
-
-        private class TilemapLayer
-        {
-            public bool IsSelected;
-            public TilemapRenderer TilemapInstance;
-            public int SortIndex;
-            public string LayerType;
-        }
-
-        private List<TilemapLayer> m_tilemapLayers = new List<TilemapLayer>();
-
+        */
         private void DoTilemapLayersGUI(Rect panelRect)
         {
             TilemapLayersSettings.TilemapLayer[] layerTypes = TilemapLayersSettings.GetLayers();
@@ -1483,7 +1488,7 @@ namespace UnityEditor.Tilemaps
                                                                    labelRect.height);
 
                                         // Add new layer at the top
-                                        if (EditorGUI.Button(buttonRect, k_NewLayerAtTopButtonText))
+                                        if (EditorGUI.Button(buttonRect, Styles.newLayerAtTopButtonText))
                                         {
                                             //Undo.RecordObject(m_tilemapLayers[i].TilemapInstance.transform.parent.gameObject, "Tilemap layer added");
                                             EditorUtility.SetDirty(m_tilemapLayers[i].TilemapInstance.transform.parent.gameObject);
@@ -1512,7 +1517,7 @@ namespace UnityEditor.Tilemaps
                                         buttonRect.x = labelRect.x + labelRect.width - k_TilemapLayerHeaderButtonWidth;
 
                                         // Add new layer at the bottom
-                                        if (EditorGUI.Button(buttonRect, k_NewLayerAtBottomButtonText))
+                                        if (EditorGUI.Button(buttonRect, Styles.newLayerAtBottomButtonText))
                                         {
                                             //Undo.RecordObject(m_tilemapLayers[i].TilemapInstance.transform.parent.gameObject, "Tilemap layer added");
                                             EditorUtility.SetDirty(m_tilemapLayers[i].TilemapInstance.transform.parent.gameObject);
@@ -1578,7 +1583,7 @@ namespace UnityEditor.Tilemaps
                                                        k_TilemapLayerHeaderButtonWidth,
                                                        labelRect.height);
 
-                                if (EditorGUI.Button(buttonRect, k_MoveLayerUpButtonText))
+                                if (EditorGUI.Button(buttonRect, Styles.moveLayerUpButtonText))
                                 {
                                     //Undo.RecordObjects(new Object[]{ m_tilemapLayers[i].TilemapInstance.gameObject, m_tilemapLayers[i].TilemapInstance }, "Tilemap layer order change");
                                     EditorUtility.SetDirty(m_tilemapLayers[i].TilemapInstance.gameObject);
@@ -1590,7 +1595,7 @@ namespace UnityEditor.Tilemaps
 
                                 buttonRect.x = labelRect.x + labelRect.width + k_TilemapLayerHeaderButtonWidth;
 
-                                if (EditorGUI.Button(buttonRect, k_MoveLayerDownButtonText))
+                                if (EditorGUI.Button(buttonRect, Styles.moveLayerDownButtonText))
                                 {
                                     //Undo.RecordObjects(new Object[]{ m_tilemapLayers[i].TilemapInstance.gameObject, m_tilemapLayers[i].TilemapInstance }, "Tilemap layer order change");
                                     EditorUtility.SetDirty(m_tilemapLayers[i].TilemapInstance.gameObject);
@@ -1663,7 +1668,7 @@ namespace UnityEditor.Tilemaps
             if (GridPaintingState.scenePaintTarget != null)
                 EditorGUIUtility.PingObject(GridPaintingState.scenePaintTarget);
         }
-
+        /*
         private void DoClipboardHeader()
         {
             if (!GridPalettes.palettes.Contains(palette) || palette == null) // Palette not in list means it was deleted
@@ -1724,7 +1729,7 @@ namespace UnityEditor.Tilemaps
                 }
             }
         }
-
+        */
         private void SelectPalette(int i, object o)
         {
             if (i < GridPalettes.palettes.Count)
@@ -1738,13 +1743,11 @@ namespace UnityEditor.Tilemaps
             }
         }
 
-        Vector2 m_paletteScrollView = Vector2.zero;
-
         private void DoPalettesSelectionList(float areaWidth)
         {
             const float BUTTON_WIDTH = 30.0f;
             areaWidth -= 10.0f; // Borders
-            int columns = Mathf.Clamp(Mathf.FloorToInt(areaWidth / (BUTTON_WIDTH + 5.0f)), 1, GridPalettes.palettes.Count + 14);
+            int columns = Mathf.Clamp(Mathf.FloorToInt(areaWidth / (BUTTON_WIDTH + 5.0f)), 1, GridPalettes.palettes.Count);
 
             EditorGUILayout.BeginVertical(GUILayout.Width(areaWidth));
             {
@@ -1789,7 +1792,7 @@ namespace UnityEditor.Tilemaps
                                 EditorGUILayout.EndHorizontal();
                             }
                         }
-
+                        /*
                         for (int i = GridPalettes.palettes.Count; i < GridPalettes.palettes.Count + 14; ++i)
                         {
                             if (i % columns == 0)
@@ -1807,7 +1810,7 @@ namespace UnityEditor.Tilemaps
                                 EditorGUILayout.EndHorizontal();
                             }
                         }
-
+                        */
                         if (GridPalettes.palettes.Count % columns != 0)
                         {
                             EditorGUILayout.EndHorizontal();
