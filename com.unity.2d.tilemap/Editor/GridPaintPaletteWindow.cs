@@ -125,6 +125,8 @@ namespace UnityEditor.Tilemaps
             public static readonly float dragPadding = 3f;
 
             public static readonly GUILayoutOption[] dropdownOptions = { GUILayout.Width(k_DropdownWidth) };
+
+            public static readonly GUIContent setPaletteIcon = EditorGUIUtility.TrTextContent("Set palette icon", "Stores the sprite of the selected tile as the icon of the current palette.");
         }
 
         private class TilePaletteSaveScope : IDisposable
@@ -484,6 +486,7 @@ namespace UnityEditor.Tilemaps
             EditorGUILayout.BeginHorizontal();
             float leftMargin = (Screen.width / EditorGUIUtility.pixelsPerPoint - TilemapEditorTool.tilemapEditorToolsToolbarSize) * 0.5f;
             GUILayout.Space(leftMargin);
+            float toolbarHeight = 40.0f;
             DoTilemapToolbar();
             GUILayout.Space(leftMargin);
             EditorGUILayout.EndHorizontal();
@@ -493,30 +496,49 @@ namespace UnityEditor.Tilemaps
             GUILayout.Space(leftMargin);
             EditorGUILayout.EndHorizontal();
             GUILayout.Space(6f);
+            //Rect clipboardToolbarRect = = EditorGUILayout.BeginHorizontal(GUIContent.none, Styles.ToolbarTitleStyle);
+
+            //EditorGUILayout.EndHorizontal();
+            //DoClipboardHeader(position.width);
+
             EditorGUILayout.EndVertical();
 
             EditorGUILayout.BeginVertical();
-
-            Rect clipboardToolbarRect = EditorGUILayout.BeginHorizontal(GUIContent.none, Styles.ToolbarTitleStyle);
-            DoClipboardHeader();
-            EditorGUILayout.EndHorizontal();
-
+            const float k_PaletteSelectionAreaHeight = 115.0f;
+            const float k_ClipboardLeftMarging = 5.0f;
             float heightOfTilemapLayers = 20.0f * (GridPaintingState.validTargets.Length + TilemapLayersSettings.GetLayers().Length); // This must be subtracted to the height of the clipboard because it is drawn in a space defined by a Space call, so adding new elements, like toggles, makes the height be greater and that disarranges the elements below
-            ConvertGridPrefabToPalette(clipboardToolbarRect);
+            ConvertGridPrefabToPalette(new Rect());
             // The area of the drag handler of the brush inspector
-            Rect dragRect = new Rect(k_DropdownWidth + k_ResizerDragRectPadding, -heightOfTilemapLayers, position.width - k_DropdownWidth - k_ResizerDragRectPadding, k_ToolbarHeight);
+            Rect dragRect = new Rect(k_DropdownWidth + k_ResizerDragRectPadding, 
+                                     0, 
+                                     position.width - k_DropdownWidth - k_ResizerDragRectPadding, 
+                                     k_ToolbarHeight);
+
             // The area of the brush inspector
             float brushInspectorSize = m_PreviewResizer.ResizeHandle(position, k_MinBrushInspectorHeight, k_MinClipboardHeight, k_ToolbarHeight, dragRect);
             // The area of the tile selector / clipboard
-            float clipboardHeight = position.height - brushInspectorSize - k_TopAreaHeight;
-            Rect clipboardRect = new Rect(k_LayersPanelWidth, clipboardToolbarRect.yMax, position.width - k_LayersPanelWidth, clipboardHeight);
-            DoTilemapLayersGUI(new Rect(0.0f, clipboardToolbarRect.yMax, k_LayersPanelWidth, clipboardHeight));
+            float clipboardHeight = position.height - brushInspectorSize - k_PaletteSelectionAreaHeight - toolbarHeight + k_ToolbarHeight;
+            Rect clipboardRect = new Rect(k_LayersPanelWidth + k_ClipboardLeftMarging, 
+                                          k_PaletteSelectionAreaHeight, 
+                                          position.width - k_LayersPanelWidth - k_ClipboardLeftMarging, 
+                                          clipboardHeight);
+            EditorGUILayout.BeginHorizontal();
+            DoTilemapLayersGUI(new Rect(0.0f, toolbarHeight, k_LayersPanelWidth, clipboardHeight + k_PaletteSelectionAreaHeight - toolbarHeight));
+            DoPalettesSelectionList(position.width - k_LayersPanelWidth);
+            EditorGUILayout.EndHorizontal();
 
             // Note: Logic and visual representation is split due to the mouse inputs are handled by the first drawn element. The toggle is drawn, then the clipboard is drawn over it, then the toggle is drawn again (without logic) just to make it visible
+            // Enable Edit mode toggle
+            Rect enableEditModeToggleRect = DoEnableEditModeToggleLogic(clipboardRect);
+            // Draw gizmos toggle
+            Rect drawGizmosToggleRect = DoDrawGizmosToggleLogic(enableEditModeToggleRect);
             // Tile layer selection toggle
-            Rect tileLayerSelectionToggleRect = DoTileLayerSelectionToggleLogic(clipboardRect);
+            Rect tileLayerSelectionToggleRect = DoTileLayerSelectionToggleLogic(drawGizmosToggleRect);
+            // Set palette icon button
+            Rect setPaletteIconButtonRect = DoSetPaletteIconButtonLogic(tileLayerSelectionToggleRect);
+
             // Select tile asset button
-            Rect selectTileButtonRect = DoSelectTileAssetButtonLogic(tileLayerSelectionToggleRect);
+            Rect selectTileButtonRect = DoSelectTileAssetButtonLogic(clipboardRect);
 
             int tileLayerIndex = -1;
             bool tileLayerExists = GetTileLayerIndex(clipboardView.activeTile as CustomDefaultTile, out tileLayerIndex);
@@ -541,14 +563,20 @@ namespace UnityEditor.Tilemaps
             DoTileLayerSelectionToggleVisualRepresentation(tileLayerSelectionToggleRect);
             DoSelectTileAssetButtonVisualRepresentation(selectTileButtonRect);
 
+            DoSetPaletteIconButtonVisualRepresentation(setPaletteIconButtonRect);
+
             if (!tileLayerExists)
             {
                 DoCreateTileLayerButtonVisualRepresentation(createLayerButtonRect);
             }
 
+            DoEnableEditModeToggleVisualRepresentation(enableEditModeToggleRect);
+            DoDrawGizmosToggleVisualRepresentation(drawGizmosToggleRect);
+
             EditorGUILayout.EndVertical();
 
-            GUILayout.Space(clipboardRect.height - heightOfTilemapLayers);
+            // Area from the layer list to the brush selector
+            GUILayout.Space(clipboardHeight - heightOfTilemapLayers + k_PaletteSelectionAreaHeight - toolbarHeight);
 
             EditorGUILayout.BeginVertical();
             EditorGUILayout.BeginHorizontal(GUIContent.none, Styles.ToolbarTitleStyle);
@@ -566,7 +594,7 @@ namespace UnityEditor.Tilemaps
             Handles.color = Color.black.AlphaMultiplied(0.33f);
             Handles.DrawLine(new Vector3(0, GUILayoutUtility.GetLastRect().yMax + 0.5f, 0), new Vector3(Screen.width, GUILayoutUtility.GetLastRect().yMax + 0.5f, 0));
             Handles.color = oldColor;
-
+            
             EditorGUILayout.BeginVertical();
 
             GUILayout.Space(2f);
@@ -631,6 +659,91 @@ namespace UnityEditor.Tilemaps
         {
             return layerTypeIndex * 100 - sortingOrderInLayer;
         }
+        
+        private Rect DoDrawGizmosToggleLogic(Rect buttonPosition)
+        {
+            Rect drawGizmosToggleRect = buttonPosition;
+            drawGizmosToggleRect.x = position.width - 70.0f;
+            drawGizmosToggleRect.y += 20.0f;
+            drawGizmosToggleRect.width = 70.0f;
+            drawGizmosToggleRect.height = 20.0f;
+
+            using (new EditorGUI.DisabledScope(palette == null))
+            {
+                EditorGUI.BeginChangeCheck();
+                {
+                    m_DrawGizmos = EditorGUI.ToggleLeft(drawGizmosToggleRect, Styles.gizmos, m_DrawGizmos, EditorStyles.toolbarButton);
+                } 
+                if (EditorGUI.EndChangeCheck())
+                {
+                    if (m_DrawGizmos)
+                    {
+                        clipboardView.SavePaletteIfNecessary();
+                        ResetPreviewInstance();
+                    }
+                    Repaint();
+                }
+            }
+
+            return drawGizmosToggleRect;
+        }
+
+        private void DoDrawGizmosToggleVisualRepresentation(Rect togglePosition)
+        {
+            EditorGUI.ToggleLeft(togglePosition, Styles.gizmos, m_DrawGizmos, EditorStyles.toolbarButton);
+        }
+
+        private Rect DoEnableEditModeToggleLogic(Rect buttonPosition)
+        {
+            Rect enableEditModeToggleRect = buttonPosition;
+            enableEditModeToggleRect.x = position.width - 70.0f;
+            enableEditModeToggleRect.y += 0.0f;
+            enableEditModeToggleRect.width = 70.0f;
+            enableEditModeToggleRect.height = 20.0f;
+
+            using (new EditorGUI.DisabledScope(palette == null))
+            {
+                clipboardView.unlocked = EditorGUI.ToggleLeft(enableEditModeToggleRect, clipboardView.isModified ? Styles.editModified : Styles.edit, clipboardView.unlocked, EditorStyles.toolbarButton);
+            }
+
+            return enableEditModeToggleRect;
+        }
+
+        private void DoEnableEditModeToggleVisualRepresentation(Rect togglePosition)
+        {
+            Color previousColor = GUI.backgroundColor;
+            GUI.backgroundColor = clipboardView.unlocked ? Color.magenta : previousColor;
+            GUI.color = GUI.backgroundColor;
+            EditorGUI.ToggleLeft(togglePosition, clipboardView.isModified ? Styles.editModified : Styles.edit, clipboardView.unlocked, EditorStyles.toolbarButton);
+            GUI.color = previousColor;
+            GUI.backgroundColor = previousColor;
+        }
+
+        private Rect DoSetPaletteIconButtonLogic(Rect buttonPosition)
+        {
+            Rect setPaletteIconButtonRect = buttonPosition;
+            setPaletteIconButtonRect.x = position.width - 100.0f;
+            setPaletteIconButtonRect.y += 20.0f;
+            setPaletteIconButtonRect.width = 100.0f;
+            setPaletteIconButtonRect.height = 20.0f;
+
+            if (clipboardView.activeTile != null &&
+                EditorGUI.Button(setPaletteIconButtonRect, Styles.setPaletteIcon))
+            {
+                //GridPalette gridPalette = GridPaletteUtility.GetGridPaletteFromPaletteAsset(palette);
+                GridPaletteIconsCache.SetIconForPalette((clipboardView.activeTile as Tile).sprite, palette);
+            }
+
+            return setPaletteIconButtonRect;
+        }
+
+        private void DoSetPaletteIconButtonVisualRepresentation(Rect buttonPosition)
+        {
+            if (clipboardView.activeTile != null &&
+                EditorGUI.Button(buttonPosition, Styles.setPaletteIcon))
+            {
+            }
+        }
 
         private Rect DoCreateTileLayerButtonLogic(Rect position, int newLayerInsertionIndex)
         {
@@ -663,21 +776,25 @@ namespace UnityEditor.Tilemaps
             return createLayerButtonRect;
         }
 
-        private void DoCreateTileLayerButtonVisualRepresentation(Rect position)
+        private void DoCreateTileLayerButtonVisualRepresentation(Rect buttonPosition)
         {
             Color previousColor = GUI.backgroundColor;
             GUI.backgroundColor = Color.red;
-            if (EditorGUI.Button(position, k_CreateLayerButtonText))
+            if (EditorGUI.Button(buttonPosition, k_CreateLayerButtonText))
             {
             }
 
             GUI.backgroundColor = previousColor;
+
+            EditorGUI.DrawOutline(buttonPosition, 1, Color.red);
         }
 
-        private Rect DoTileLayerSelectionToggleLogic(Rect position)
+        private Rect DoTileLayerSelectionToggleLogic(Rect buttonPosition)
         {
-            Rect tileLayerSelectionToggleRect = position;
-            tileLayerSelectionToggleRect.width = 120.0f;
+            Rect tileLayerSelectionToggleRect = buttonPosition;
+            tileLayerSelectionToggleRect.x = position.width - 140.0f;
+            tileLayerSelectionToggleRect.y += 20.0f;
+            tileLayerSelectionToggleRect.width = 140.0f;
             tileLayerSelectionToggleRect.height = 20.0f;
 
             m_enableTileLayerSelection = EditorGUI.ToggleLeft(tileLayerSelectionToggleRect, k_TileLayerSelectionToggleText, m_enableTileLayerSelection);
@@ -685,20 +802,15 @@ namespace UnityEditor.Tilemaps
             return tileLayerSelectionToggleRect;
         }
 
-        private void DoTileLayerSelectionToggleVisualRepresentation(Rect position)
+        private void DoTileLayerSelectionToggleVisualRepresentation(Rect buttonPosition)
         {
-            Color previousColor = GUI.backgroundColor;
-            GUI.backgroundColor = Color.cyan;
-            EditorGUIUtility.labelWidth = position.width;
-            EditorGUI.Toggle(position, string.Empty, m_enableTileLayerSelection, EditorStyles.toolbarButtonLeft);
-            EditorGUI.Toggle(position, k_TileLayerSelectionToggleText, m_enableTileLayerSelection);
-            GUI.backgroundColor = previousColor;
+            EditorGUI.ToggleLeft(buttonPosition, k_TileLayerSelectionToggleText, m_enableTileLayerSelection, EditorStyles.toolbarButton);
         }
 
-        private Rect DoSelectTileAssetButtonLogic(Rect position)
+        private Rect DoSelectTileAssetButtonLogic(Rect buttonPosition)
         {
-            Rect selectTileButtonRect = position;
-            selectTileButtonRect.y += 20.0f;
+            Rect selectTileButtonRect = buttonPosition;
+            selectTileButtonRect.y += 0.0f;
             selectTileButtonRect.width = 120.0f;
             selectTileButtonRect.height = 20.0f;
 
@@ -712,10 +824,10 @@ namespace UnityEditor.Tilemaps
             return selectTileButtonRect;
         }
 
-        private void DoSelectTileAssetButtonVisualRepresentation(Rect position)
+        private void DoSelectTileAssetButtonVisualRepresentation(Rect buttonPosition)
         {
             if (clipboardView.activeTile != null &&
-                EditorGUI.Button(position, k_SelectTileButtonText))
+                EditorGUI.Button(buttonPosition, k_SelectTileButtonText))
             {
             }
         }
@@ -1328,7 +1440,10 @@ namespace UnityEditor.Tilemaps
             }
 
             // Draws the layer list
-            m_tilemapLayersScrollViewPos = GUI.BeginScrollView(panelRect, m_tilemapLayersScrollViewPos, panelRect);
+            Rect viewRect = panelRect;
+            viewRect.height = 20.0f * (GridPaintingState.validTargets.Length + TilemapLayersSettings.GetLayers().Length);
+
+            m_tilemapLayersScrollViewPos = GUI.BeginScrollView(panelRect, m_tilemapLayersScrollViewPos, viewRect);
             {
                 EditorGUILayout.BeginVertical();
                 {
@@ -1564,7 +1679,6 @@ namespace UnityEditor.Tilemaps
             DoPalettesDropdown();
             using (new EditorGUI.DisabledScope(palette == null))
             {
-                GUILayout.Space(k_LayersPanelWidth);
                 clipboardView.unlocked = GUILayout.Toggle(clipboardView.unlocked,
                     clipboardView.isModified ? Styles.editModified : Styles.edit,
                     EditorStyles.toolbarButton);
@@ -1622,6 +1736,88 @@ namespace UnityEditor.Tilemaps
                 m_PaletteDropdown.editorWindow.Close();
                 OpenAddPalettePopup(new Rect(0, 0, 0, 0));
             }
+        }
+
+        Vector2 m_paletteScrollView = Vector2.zero;
+
+        private void DoPalettesSelectionList(float areaWidth)
+        {
+            const float BUTTON_WIDTH = 30.0f;
+            areaWidth -= 10.0f; // Borders
+            int columns = Mathf.Clamp(Mathf.FloorToInt(areaWidth / (BUTTON_WIDTH + 5.0f)), 1, GridPalettes.palettes.Count + 14);
+
+            EditorGUILayout.BeginVertical(GUILayout.Width(areaWidth));
+            {
+                m_paletteScrollView = EditorGUILayout.BeginScrollView(m_paletteScrollView, GUILayout.Height((BUTTON_WIDTH + 5.0f) * 2), GUILayout.Width(areaWidth));
+                {
+                    EditorGUILayout.BeginVertical();
+                    {
+                        for (int i = 0; i < GridPalettes.palettes.Count; ++i)
+                        {
+                            if (i % columns == 0)
+                            {
+                                EditorGUILayout.BeginHorizontal();
+                            }
+
+                            Sprite icon = GridPaletteIconsCache.GetIconByPalette(GridPalettes.palettes[i]);
+                            string buttonText = icon == null ? GridPalettes.palettes[i].name : string.Empty;
+
+                            if (GUILayout.Button(new GUIContent(buttonText, GridPalettes.palettes[i].name), GUILayout.Height(BUTTON_WIDTH), GUILayout.Width(BUTTON_WIDTH)))
+                            {
+                                palette = GridPalettes.palettes[i];
+                            }
+
+                            if (icon != null)
+                            {
+                                Rect buttonRect = GUILayoutUtility.GetLastRect();
+                                buttonRect.x += 3.0f;
+                                buttonRect.y += 3.0f;
+                                buttonRect.width -= 6.0f;
+                                buttonRect.height -= 6.0f;
+
+                                Rect textureRect = icon.textureRect;
+                                textureRect.x /= icon.texture.width;
+                                textureRect.y /= icon.texture.height;
+                                textureRect.width /= icon.texture.width;
+                                textureRect.height /= icon.texture.height;
+
+                                GUI.DrawTextureWithTexCoords(buttonRect, icon.texture, textureRect);
+                            }
+
+                            if (i % columns == columns - 1)
+                            {
+                                EditorGUILayout.EndHorizontal();
+                            }
+                        }
+
+                        for (int i = GridPalettes.palettes.Count; i < GridPalettes.palettes.Count + 14; ++i)
+                        {
+                            if (i % columns == 0)
+                            {
+                                EditorGUILayout.BeginHorizontal();
+                            }
+
+                            if (GUILayout.Button(new GUIContent(""), GUILayout.Height(BUTTON_WIDTH), GUILayout.Width(BUTTON_WIDTH)))
+                            {
+
+                            }
+
+                            if (i % columns == columns - 1)
+                            {
+                                EditorGUILayout.EndHorizontal();
+                            }
+                        }
+
+                        if (GridPalettes.palettes.Count % columns != 0)
+                        {
+                            EditorGUILayout.EndHorizontal();
+                        }
+                    }
+                    EditorGUILayout.EndVertical();
+                }
+                EditorGUILayout.EndScrollView();
+            }
+            EditorGUILayout.EndVertical();
         }
 
         private void OpenAddPalettePopup(Rect rect)
@@ -1688,6 +1884,12 @@ namespace UnityEditor.Tilemaps
             if (clipboardView.showNewEmptyClipboardInfo)
             {
                 DisplayClipboardText(Styles.emptyPaletteInfo, position);
+            }
+
+            // If in Edit mode, a colored frame is drawn
+            if (clipboardView.unlocked)
+            {
+                EditorGUI.DrawOutline(position, 2, Color.magenta);
             }
         }
 
