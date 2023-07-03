@@ -8,8 +8,10 @@ using UnityEngine.Tilemaps;
 using Event = UnityEngine.Event;
 using Object = UnityEngine.Object;
 
-using UnityEditor.Experimental.SceneManagement;
 using UnityEditor.SceneManagement;
+#if UNITY_2019 || UNITY_2019_1_OR_NEWER
+using UnityEditor.Experimental.SceneManagement;
+#endif
 
 namespace UnityEditor.Tilemaps
 {
@@ -527,7 +529,7 @@ namespace UnityEditor.Tilemaps
             EditorGUILayout.BeginVertical();
             const float k_PaletteSelectionAreaHeight = 115.0f;
             const float k_ClipboardLeftMarging = 5.0f;
-            float heightOfTilemapLayers = 20.0f * MathF.Max(GridPaintingState.validTargets.Length + TilemapLayersSettings.GetLayers().Length, k_MinimumRowsInTilemapLayerList); // This must be subtracted to the height of the clipboard because it is drawn in a space defined by a Space call, so adding new elements, like toggles, makes the height be greater and that disarranges the elements below
+            float heightOfTilemapLayers = 20.0f * Mathf.Max(GridPaintingState.validTargets.Length + TilemapLayersSettings.GetLayers().Length, k_MinimumRowsInTilemapLayerList); // This must be subtracted to the height of the clipboard because it is drawn in a space defined by a Space call, so adding new elements, like toggles, makes the height be greater and that disarranges the elements below
             
             ConvertGridPrefabToPalette(new Rect());
             // The area of the drag handler of the brush inspector
@@ -869,10 +871,19 @@ namespace UnityEditor.Tilemaps
             EditorTool active = EditorToolManager.activeTool;
             EditorTool selected;
 
+
+#if UNITY_2021 || UNITY_2021_1_OR_NEWER
+            if (EditorGUILayout.EditorToolbar(GUIContent.none, active, TilemapEditorTool.tilemapEditorTools, out selected))
+#elif UNITY_2019 || UNITY_2019_1_OR_NEWER
             if (EditorGUILayout.EditorToolbar(active, TilemapEditorTool.tilemapEditorTools, out selected))
+#endif
             {
                 if (active == selected)
+#if UNITY_2021 || UNITY_2021_1_OR_NEWER
+                    ToolManager.SetActiveTool(EditorToolManager.activeTool);
+#elif UNITY_2019 || UNITY_2019_1_OR_NEWER
                     ToolManager.SetActiveTool(EditorToolManager.GetLastTool(x => !TilemapEditorTool.tilemapEditorTools.Contains(x)));
+#endif
                 else
                     ToolManager.SetActiveTool(selected);
             }

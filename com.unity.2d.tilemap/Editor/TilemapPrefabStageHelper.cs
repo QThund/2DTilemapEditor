@@ -1,4 +1,10 @@
+
+#if UNITY_2021 || UNITY_2021_1_OR_NEWER
+using UnityEditor.SceneManagement;
+#elif UNITY_2019 || UNITY_2019_1_OR_NEWER
 using UnityEditor.Experimental.SceneManagement;
+#endif
+
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.Tilemaps;
