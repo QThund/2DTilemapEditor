@@ -82,10 +82,7 @@ namespace UnityEditor.Tilemaps
                     EditorGUILayout.BeginVertical();
                     {
                         SerializedProperty property = serializedObject.FindProperty(nameof(settings.Layers));
-                        if(EditorGUILayout.PropertyField(property))
-                        {
-                            serializedObject.ApplyModifiedProperties();
-                        }
+                        EditorGUILayout.PropertyField(property);
 
                         if(GUILayout.Button("Save"))
                         {
@@ -96,7 +93,10 @@ namespace UnityEditor.Tilemaps
                     EditorGUILayout.EndVertical();
                 }
                 if (EditorGUI.EndChangeCheck())
+                {
                     EditorUtility.SetDirty(settings);
+                    serializedObject.ApplyModifiedProperties();
+                }
             }
         }
     }
