@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 68fa4a51bae7c4644a7ddb186bd21e66, type: 3}
+  m_Name: GridPaletteIconsCache
+  m_EditorClassIdentifier: 
+  m_Icons:
+  - Palette: {fileID: 2635628183452989224, guid: bff1f6eda5abc194ba87dc198a3d0410, type: 3}
+    Icon: {fileID: 1232833922, guid: d71b9996af574964aa4c45ccbaa0f807, type: 3}
+  - Palette: {fileID: 4620499249305504344, guid: f944ae8ff535dfd46ace1b50b388a51e, type: 3}
+    Icon: {fileID: -503309283, guid: 2d470cffc4837ae45a2f84a43a3cce8b, type: 3}
+  - Palette: {fileID: 4267467940237642628, guid: 1d70243c865608c4bab6537fab19b378, type: 3}
+    Icon: {fileID: 700834243, guid: dc842c44e023f31478ef664ce0df892f, type: 3}
