@@ -81,6 +81,8 @@ namespace UnityEditor.Tilemaps
                 {
                     EditorGUILayout.BeginVertical();
                     {
+                        EditorGUILayout.HelpBox("Add the tilemap layer types of your project. Normally, layer types match the Sorting layers you use for your sprites, so some layers are drawn atop others. This layer types will appear as groups in the layer list of the Tile Palette. A different prefab can be instantiated for every layer type when creatng new layers using the buttons of the layer list in the Tile Palette.", MessageType.Info, true);
+
                         SerializedProperty property = serializedObject.FindProperty(nameof(settings.Layers));
                         EditorGUILayout.PropertyField(property);
 

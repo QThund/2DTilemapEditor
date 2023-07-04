@@ -56,7 +56,7 @@ namespace UnityEditor.Tilemaps
         /// <param name="palette">The palette asset.</param>
         public static void SetIconForPalette(Sprite icon, GameObject palette)
         {
-            string[] foundAssets = AssetDatabase.FindAssets("t:GridPaletteIconsCache");
+            string[] foundAssets = AssetDatabase.FindAssets("t:" + nameof(GridPaletteIconsCache));
 
             if (foundAssets.Length > 0)
             {
@@ -86,8 +86,11 @@ namespace UnityEditor.Tilemaps
             {
                 GridPaletteIconsCache iconsCache = ScriptableObject.CreateInstance<GridPaletteIconsCache>();
                 iconsCache.m_Icons.Add(new GridPaletteIcon() { Palette = palette, Icon = icon });
-                AssetDatabase.CreateAsset(iconsCache, "Assets/GridPaletteIconsCache.asset");
+                AssetDatabase.CreateAsset(iconsCache, "Assets/" + nameof(GridPaletteIconsCache) + ".asset");
                 EditorUtility.SetDirty(iconsCache);
+
+                EditorGUIUtility.PingObject(iconsCache);
+                Debug.Log("Created asset at Assets/" + nameof(GridPaletteIconsCache) + ".");
             }
         }
 

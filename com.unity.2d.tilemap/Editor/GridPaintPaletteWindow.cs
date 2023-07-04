@@ -139,6 +139,7 @@ namespace UnityEditor.Tilemaps
             public static readonly GUIContent noPalettesAvailableText = EditorGUIUtility.TrTextContent("No palettes available.");
             public static readonly GUIContent noGridInSceneText = EditorGUIUtility.TrTextContent("There is no grid in the scene.");
             public static readonly GUIContent noLayersInGrid = EditorGUIUtility.TrTextContent("No layers in grid.");
+            public static readonly GUIContent createTilemapLayerSettings = EditorGUIUtility.TrTextContent("Create layer settings.", "It will create the asset were you can setup the tilemap layer types of your project.");
         }
 
         private class TilePaletteSaveScope : IDisposable
@@ -1503,7 +1504,7 @@ namespace UnityEditor.Tilemaps
 
             m_tilemapLayersScrollViewPos = GUI.BeginScrollView(panelRect, m_tilemapLayersScrollViewPos, viewRect);
             {
-                EditorGUILayout.BeginVertical();
+                EditorGUILayout.BeginVertical(GUILayout.Width(panelRect.width));
                 {
                     if (grid != null)
                     {
@@ -1727,10 +1728,32 @@ namespace UnityEditor.Tilemaps
                     // Makes sure the list has a minimum height
                     int drawnRows = m_tilemapLayers.Count + (grid == null ? 1 
                                                                           : layerTypes.Length);
+
+                    if(drawnRows < k_MinimumRowsInTilemapLayerList &&
+                       AssetDatabase.FindAssets("t:" + nameof(TilemapLayersSettings)).Length == 0)
+                    {
+                        Color previousColor = GUI.backgroundColor;
+                        GUI.backgroundColor = Color.red;
+
+                        if (GUILayout.Button(Styles.createTilemapLayerSettings))
+                        {
+                            TilemapLayersSettings settings = ScriptableObject.CreateInstance<TilemapLayersSettings>();
+                            AssetDatabase.CreateAsset(settings, "Assets/" + nameof(TilemapLayersSettings) + ".asset");
+                            EditorUtility.SetDirty(settings);
+
+                            EditorGUIUtility.PingObject(settings);
+                            Debug.Log("Created asset at Assets/" + nameof(TilemapLayersSettings) + ".");
+                        }
+
+                        GUI.backgroundColor = previousColor;
+
+                        drawnRows++;
+                    }
+
                     if (drawnRows < k_MinimumRowsInTilemapLayerList)
                     {
                         // Fills the space until it has the desited height
-                        for (int k = 0; k < 5 - drawnRows; ++k)
+                        for (int k = 0; k < k_MinimumRowsInTilemapLayerList - drawnRows; ++k)
                         {
                             EditorGUILayout.LabelField(string.Empty);
                         }
