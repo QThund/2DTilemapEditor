@@ -1504,6 +1504,8 @@ namespace UnityEditor.Tilemaps
 
                         // Tilemap type headers
                         Color previousColor = GUI.backgroundColor;
+                        GUIStyleState previousState = EditorStyles.foldoutHeader.focused;
+                        EditorStyles.foldoutHeader.focused = EditorStyles.foldoutHeader.normal;
                         int layerIndex = -1;
 
                         for(int i = 0; i < layerTypes.Length; ++i)
@@ -1700,6 +1702,8 @@ namespace UnityEditor.Tilemaps
                                 }
                             }
                         }
+
+                        EditorStyles.foldoutHeader.focused = previousState;
                     }
                     else // grid == null
                     {
