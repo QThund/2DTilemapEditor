@@ -787,6 +787,7 @@ namespace UnityEditor.Tilemaps
             Rect createLayerButtonRect = buttonPosition;
             createLayerButtonRect.y += 20.0f;
             createLayerButtonRect.width = 120.0f;
+            createLayerButtonRect.height = 40.0f;
 
             if (EditorGUI.Button(createLayerButtonRect, Styles.createLayerButtonText))
             {
@@ -818,6 +819,16 @@ namespace UnityEditor.Tilemaps
             if (EditorGUI.Button(buttonPosition, Styles.createLayerButtonText))
             {
             }
+
+            // The name of the layer to be created
+            Rect labelRect = buttonPosition;
+            labelRect.y += 17.0f;
+            labelRect.height = 23.0f;
+
+            CustomDefaultTile activeTile = clipboardView.activeTile as CustomDefaultTile;
+            string layerTypeName = TilemapLayersSettings.GetLayers()[activeTile.TilemapLayerIndex].Name;
+
+            EditorGUI.LabelField(labelRect, layerTypeName + "_" + activeTile.SortingOrderInLayer, EditorStyles.contentToolbar);
 
             GUI.backgroundColor = previousColor;
 
