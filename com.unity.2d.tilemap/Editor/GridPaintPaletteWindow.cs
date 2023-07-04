@@ -1853,6 +1853,24 @@ namespace UnityEditor.Tilemaps
             }
         }
 
+        public static string AdaptPaletteAssetName(string assetName)
+        {
+            int nameStartIndex = 0;
+            int nameLength = assetName.Length;
+
+            if (assetName.StartsWith("P_"))
+            {
+                nameStartIndex = 2; // "P_".length
+            }
+
+            if (assetName.EndsWith("Palette"))
+            {
+                nameLength = assetName.Length - nameStartIndex - 7; // "Palette".length
+            }
+
+            return assetName.Substring(nameStartIndex, nameLength);
+        }
+
         private void DoPalettesSelectionList(float areaWidth)
         {
             const float BUTTON_WIDTH = 30.0f;
@@ -1884,7 +1902,7 @@ namespace UnityEditor.Tilemaps
                             Sprite icon = GridPaletteIconsCache.GetIconByPalette(GridPalettes.palettes[i]);
                             string buttonText = icon == null ? GridPalettes.palettes[i].name : string.Empty;
 
-                            if (GUILayout.Button(new GUIContent(buttonText, GridPalettes.palettes[i].name), GUILayout.Height(BUTTON_WIDTH), GUILayout.Width(BUTTON_WIDTH)))
+                            if (GUILayout.Button(new GUIContent(buttonText, AdaptPaletteAssetName(GridPalettes.palettes[i].name)), GUILayout.Height(BUTTON_WIDTH), GUILayout.Width(BUTTON_WIDTH)))
                             {
                                 palette = GridPalettes.palettes[i];
                             }

@@ -4,24 +4,6 @@ namespace UnityEditor.Tilemaps
 {
     internal class GridPalettesDropdown : FlexibleMenu
     {
-        public static string AdaptPaletteAssetName(string assetName)
-        {
-            int nameStartIndex = 0;
-            int nameLength = assetName.Length;
-
-            if (assetName.StartsWith("P_"))
-            {
-                nameStartIndex = 2; // "P_".length
-            }
-
-            if (assetName.EndsWith("Palette"))
-            {
-                nameLength = assetName.Length - nameStartIndex - 7; // "Palette".length
-            }
-
-            return assetName.Substring(nameStartIndex, nameLength);
-        }
-
         public GridPalettesDropdown(IFlexibleMenuItemProvider itemProvider, int selectionIndex, FlexibleMenuModifyItemUI modifyItemUi, Action<int, object> itemClickedCallback, float minWidth)
             : base(itemProvider, selectionIndex, modifyItemUi, itemClickedCallback)
         {
@@ -71,7 +53,7 @@ namespace UnityEditor.Tilemaps
             public string GetName(int index)
             {
                 if (index < GridPalettes.palettes.Count)
-                    return AdaptPaletteAssetName(GridPalettes.palettes[index].name);
+                    return GridPalettes.palettes[index].name;
                 else if (index == GridPalettes.palettes.Count)
                     return "Create New Palette";
                 else
