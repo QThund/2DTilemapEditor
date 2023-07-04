@@ -32,7 +32,11 @@ namespace UnityEditor.Tilemaps
             if (Camera.current.orthographic)
             {
                 Vector2 screen = EditorGUIUtility.PointsToPixels(GUIClip.Unclip(screenPosition));
+#if UNITY_2021 || UNITY_2021_1_OR_NEWER
+                screen.y = Camera.current.pixelHeight - screen.y;
+#elif UNITY_2019 || UNITY_2019_1_OR_NEWER
                 screen.y = Screen.height - screen.y;
+#endif
                 Vector3 cameraWorldPoint = Camera.current.ScreenToWorldPoint(screen);
                 ray = new Ray(cameraWorldPoint, Camera.current.transform.forward);
             }
