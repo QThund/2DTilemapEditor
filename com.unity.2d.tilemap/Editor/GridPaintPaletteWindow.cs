@@ -138,6 +138,7 @@ namespace UnityEditor.Tilemaps
             public static readonly GUIContent setPaletteIcon = EditorGUIUtility.TrTextContent("Set palette icon", "Stores the sprite of the selected tile as the icon of the current palette.");
             public static readonly GUIContent noPalettesAvailableText = EditorGUIUtility.TrTextContent("No palettes available.");
             public static readonly GUIContent noGridInSceneText = EditorGUIUtility.TrTextContent("There is no grid in the scene.");
+            public static readonly GUIContent noLayersInGrid = EditorGUIUtility.TrTextContent("No layers in grid.");
         }
 
         private class TilePaletteSaveScope : IDisposable
@@ -1498,7 +1499,7 @@ namespace UnityEditor.Tilemaps
                         // Selection according to scene hierarchy
                         for (int i = 0; i < m_tilemapLayers.Count; ++i)
                         {
-                            m_tilemapLayers[i].IsSelected = Selection.activeObject == m_tilemapLayers[i].TilemapInstance.gameObject;
+                            m_tilemapLayers[i].IsSelected = GridPaintingState.scenePaintTarget == m_tilemapLayers[i].TilemapInstance.gameObject;
                         }
 
                         // Tilemap type headers
@@ -2094,6 +2095,30 @@ namespace UnityEditor.Tilemaps
         {
             var labelWidth = EditorGUIUtility.labelWidth;
             var fieldWidth = EditorGUIUtility.fieldWidth;
+
+            Color previousColor = GUI.color;
+
+            if (m_tilemapLayers.Count > 0)
+            {
+                int previousFontSize = EditorStyles.toolbarButton.fontSize;
+                FontStyle previousFontStyle = EditorStyles.toolbarButton.fontStyle;
+                EditorStyles.toolbarButton.fontSize += 4;
+                EditorStyles.toolbarButton.fontStyle = FontStyle.Bold;
+
+                GUI.color = Color.green;
+                EditorGUILayout.LabelField(GridPaintingState.scenePaintTarget.name, EditorStyles.toolbarButton);
+
+                EditorStyles.toolbarButton.fontSize = previousFontSize;
+                EditorStyles.toolbarButton.fontStyle = previousFontStyle;
+            }
+            else
+            {
+                GUI.color = Color.red;
+                EditorGUILayout.LabelField(Styles.noLayersInGrid, EditorStyles.toolbarButton);
+            }
+
+            GUI.color = previousColor;
+
             EditorGUIUtility.labelWidth = EditorGUIUtility.fieldWidth =
                 0.5f * (EditorGUIUtility.labelWidth + EditorGUIUtility.fieldWidth);
             var newFocus = (TilemapFocusMode)EditorGUILayout.EnumPopup(Styles.focusLabel, focusMode);
