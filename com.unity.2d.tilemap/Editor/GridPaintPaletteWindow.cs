@@ -1918,6 +1918,11 @@ namespace UnityEditor.Tilemaps
                                 palette = GridPalettes.palettes[i];
                             }
 
+                            if(palette == GridPalettes.palettes[i])
+                            {
+                                EditorGUI.DrawOutline(GUILayoutUtility.GetLastRect(), 1, Color.green);
+                            }
+
                             if (icon != null)
                             {
                                 Rect buttonRect = GUILayoutUtility.GetLastRect();
