@@ -582,7 +582,10 @@ namespace UnityEditor.Tilemaps
             }
 
             // If enabled, it selects the layer of the tile when selected
-            if (m_enableTileLayerSelection && CheckNewTileSelected() && tileLayerIndex >= 0)
+            if (m_enableTileLayerSelection && 
+                CheckNewTileSelected() && 
+                tileLayerExists && 
+                tileLayerIndex >= 0)
             {
                 SelectTarget(-1, m_tilemapLayers[tileLayerIndex].TilemapInstance.gameObject);
             }
@@ -658,12 +661,10 @@ namespace UnityEditor.Tilemaps
         // Returns true if the layer of the tile exists
         private bool GetTileLayerIndex(CustomDefaultTile activeTile, out int layerIndex)
         {
-            int activeTileSortingIndex = 0;
-
             if (activeTile != null)
             {
                 // Checks whether the layer of the tile exists and, otherwise, in which position should it be inserted if created
-                activeTileSortingIndex = CalculateLayerSortingIndex(activeTile.TilemapLayerIndex, activeTile.SortingOrderInLayer);
+                int activeTileSortingIndex = CalculateLayerSortingIndex(activeTile.TilemapLayerIndex, activeTile.SortingOrderInLayer);
 
                 for (int i = 0; i < m_tilemapLayers.Count; ++i)
                 {
