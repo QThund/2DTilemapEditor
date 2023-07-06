@@ -14,9 +14,9 @@ namespace UnityEngine.Tilemaps
     [Serializable]
     public class CustomDefaultTile : Tile
     {
-        [Tooltip("The type of layer on which the tile is most probably going to be used.")]
+        [Tooltip("The type of layer on which the tile is most probably going to be used. None by default.")]
         [SerializeField]
-        protected int m_TilemapLayer;
+        protected int m_TilemapLayer = -1;
 
         [Tooltip("The sorting order of the tilemap layer with respect to other layers of the same type. The highest index will be drawn atop the rest.")]
         [SerializeField]
@@ -115,7 +115,8 @@ namespace UnityEngine.Tilemaps
 
                 EditorGUI.BeginChangeCheck();
                 {
-                    tile.TilemapLayerIndex = EditorGUILayout.Popup(Styles.TilemapLayer, tile.TilemapLayerIndex, TilemapLayersSettings.GetLayerNames());
+                    tile.TilemapLayerIndex = EditorGUILayout.Popup(Styles.TilemapLayer, tile.TilemapLayerIndex + 1, TilemapLayersSettings.GetLayerNamesWithNone());
+                    tile.TilemapLayerIndex -= 1; // None option
                 }
                 tilemapLayerIndexChanged = EditorGUI.EndChangeCheck();
 

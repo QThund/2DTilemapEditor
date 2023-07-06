@@ -23,6 +23,21 @@ namespace UnityEditor.Tilemaps
 
         private static TilemapLayer[] m_layers = new TilemapLayer[0];
         private static string[] m_layerNames = new string[0];
+        private static string[] m_layerNamesWithNone = new string[0];
+
+        /// <summary>
+        /// Gets the names of all the types of layer, including one option called "None" at the beginning.
+        /// </summary>
+        /// <returns>All the names. It does not allocate memory, the list is cached.</returns>
+        public static string[] GetLayerNamesWithNone()
+        {
+            if (m_layerNamesWithNone == null || m_layerNamesWithNone.Length == 0)
+            {
+                CacheLayers();
+            }
+
+            return m_layerNamesWithNone;
+        }
 
         /// <summary>
         /// Gets the names of all the types of layer.
@@ -30,7 +45,7 @@ namespace UnityEditor.Tilemaps
         /// <returns>All the names. It does not allocate memory, the list is cached.</returns>
         public static string[] GetLayerNames()
         {
-            if (m_layers == null || m_layers.Length == 0)
+            if (m_layerNames == null || m_layerNames.Length == 0)
             {
                 CacheLayers();
             }
@@ -54,7 +69,7 @@ namespace UnityEditor.Tilemaps
 
         private static void CacheLayers()
         {
-            string[] foundAssets = AssetDatabase.FindAssets("t:TilemapLayersSettings");
+            string[] foundAssets = AssetDatabase.FindAssets("t:" + nameof(TilemapLayersSettings));
 
             if (foundAssets.Length > 0)
             {
@@ -62,10 +77,17 @@ namespace UnityEditor.Tilemaps
                 TilemapLayersSettings settings = AssetDatabase.LoadAssetAtPath<TilemapLayersSettings>(assetPath);
                 m_layers = settings.Layers;
                 m_layerNames = new string[settings.Layers.Length];
+                m_layerNamesWithNone = new string[settings.Layers.Length + 1];
+                m_layerNamesWithNone[0] = "None";
 
-                for(int i = 0; i < m_layers.Length; ++i)
+                for (int i = 0; i < m_layers.Length; ++i)
                 {
                     m_layerNames[i] = m_layers[i].Name;
+                }
+
+                for (int i = 1; i < m_layers.Length + 1; ++i)
+                {
+                    m_layerNamesWithNone[i] = m_layers[i - 1].Name;
                 }
             }
         }

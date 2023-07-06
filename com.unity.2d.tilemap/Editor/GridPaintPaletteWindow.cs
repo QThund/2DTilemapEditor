@@ -573,7 +573,8 @@ namespace UnityEditor.Tilemaps
             // Create new layer button
             bool showCreateLayerButton = activeTile != null && 
                                          !tileLayerExists && 
-                                         (tileLayerIndex >= 0 || m_tilemapLayers.Count == 0);
+                                         (tileLayerIndex >= 0 || m_tilemapLayers.Count == 0) &&
+                                         activeTile.TilemapLayerIndex >= 0;
             Rect createLayerButtonRect = selectTileButtonRect;
 
             if (showCreateLayerButton)
@@ -778,13 +779,12 @@ namespace UnityEditor.Tilemaps
         private Rect DoCreateTileLayerButtonLogic(Rect buttonPosition, int newLayerInsertionIndex)
         {
             Grid grid = GetTilemapsGrid();
+            CustomDefaultTile activeTile = clipboardView.activeTile as CustomDefaultTile;
 
-            if(grid == null)
+            if (grid == null || activeTile == null)
             {
                 return buttonPosition;
             }
-
-            CustomDefaultTile activeTile = clipboardView.activeTile as CustomDefaultTile;
 
             Rect createLayerButtonRect = buttonPosition;
             createLayerButtonRect.y += 20.0f;
@@ -816,6 +816,13 @@ namespace UnityEditor.Tilemaps
 
         private void DoCreateTileLayerButtonVisualRepresentation(Rect buttonPosition)
         {
+            CustomDefaultTile activeTile = clipboardView.activeTile as CustomDefaultTile;
+
+            if(activeTile == null)
+            {
+                return;
+            }
+
             Color previousColor = GUI.backgroundColor;
             GUI.backgroundColor = Color.red;
             if (EditorGUI.Button(buttonPosition, Styles.createLayerButtonText))
@@ -827,7 +834,6 @@ namespace UnityEditor.Tilemaps
             labelRect.y += 17.0f;
             labelRect.height = 23.0f;
 
-            CustomDefaultTile activeTile = clipboardView.activeTile as CustomDefaultTile;
             string layerTypeName = TilemapLayersSettings.GetLayers()[activeTile.TilemapLayerIndex].Name;
 
             EditorGUI.LabelField(labelRect, layerTypeName + "_" + activeTile.SortingOrderInLayer, EditorStyles.contentToolbar);
