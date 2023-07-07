@@ -140,6 +140,7 @@ namespace UnityEditor.Tilemaps
             public static readonly GUIContent noGridInSceneText = EditorGUIUtility.TrTextContent("There is no grid in the scene.");
             public static readonly GUIContent noLayersInGrid = EditorGUIUtility.TrTextContent("No layers in grid.");
             public static readonly GUIContent createTilemapLayerSettings = EditorGUIUtility.TrTextContent("Create layer settings.", "It will create the asset were you can setup the tilemap layer types of your project.");
+            public static readonly GUIContent defineLayerTypes = EditorGUIUtility.TrTextContent("Define layer types.", "Selects the tilemap layer settings asset.");
         }
 
         private class TilePaletteSaveScope : IDisposable
@@ -531,7 +532,7 @@ namespace UnityEditor.Tilemaps
             EditorGUILayout.BeginVertical();
             const float k_PaletteSelectionAreaHeight = 115.0f;
             const float k_ClipboardLeftMarging = 5.0f;
-            float heightOfTilemapLayers = 20.0f * Mathf.Max(GridPaintingState.validTargets.Length + TilemapLayersSettings.GetLayers().Length, k_MinimumRowsInTilemapLayerList); // This must be subtracted to the height of the clipboard because it is drawn in a space defined by a Space call, so adding new elements, like toggles, makes the height be greater and that disarranges the elements below
+            float heightOfTilemapLayers = 20.0f * Mathf.Max(GridPaintingState.validTargets.Length + TilemapLayersSettings.GetLayers().Length + 1, k_MinimumRowsInTilemapLayerList); // This must be subtracted to the height of the clipboard because it is drawn in a space defined by a Space call, so adding new elements, like toggles, makes the height be greater and that disarranges the elements below
             
             ConvertGridPrefabToPalette(new Rect());
             // The area of the drag handler of the brush inspector
@@ -1507,7 +1508,7 @@ namespace UnityEditor.Tilemaps
 
             // Draws the layer list
             Rect viewRect = panelRect;
-            viewRect.height = 20.0f * (GridPaintingState.validTargets.Length + TilemapLayersSettings.GetLayers().Length);
+            viewRect.height = 20.0f * (GridPaintingState.validTargets.Length + TilemapLayersSettings.GetLayers().Length + 2);
 
             m_tilemapLayersScrollViewPos = GUI.BeginScrollView(panelRect, m_tilemapLayersScrollViewPos, viewRect);
             {
@@ -1736,12 +1737,15 @@ namespace UnityEditor.Tilemaps
                     int drawnRows = m_tilemapLayers.Count + (grid == null ? 1 
                                                                           : layerTypes.Length);
 
-                    if(drawnRows < k_MinimumRowsInTilemapLayerList &&
-                       AssetDatabase.FindAssets("t:" + nameof(TilemapLayersSettings)).Length == 0)
+                    string[] assetPaths = AssetDatabase.FindAssets("t:" + nameof(TilemapLayersSettings));
+
+                    if (drawnRows < k_MinimumRowsInTilemapLayerList &&
+                        assetPaths.Length == 0)
                     {
                         Color previousColor = GUI.backgroundColor;
                         GUI.backgroundColor = Color.red;
 
+                        // Create tilemap layers settings button
                         if (GUILayout.Button(Styles.createTilemapLayerSettings))
                         {
                             TilemapLayersSettings settings = ScriptableObject.CreateInstance<TilemapLayersSettings>();
@@ -1753,9 +1757,21 @@ namespace UnityEditor.Tilemaps
                         }
 
                         GUI.backgroundColor = previousColor;
-
-                        drawnRows++;
                     }
+                    else
+                    {
+                        EditorGUILayout.Space(-3);
+
+                        // Select tilemap layers settings button
+                        if (GUILayout.Button(Styles.defineLayerTypes, GUILayout.Height(17.0f)))
+                        {
+                            TilemapLayersSettings asset = AssetDatabase.LoadAssetAtPath<TilemapLayersSettings>(AssetDatabase.GUIDToAssetPath(assetPaths[0]));
+                            Selection.activeObject = asset;
+                            EditorApplication.ExecuteMenuItem("Window/General/Inspector");
+                        }
+                    }
+
+                    drawnRows++;
 
                     if (drawnRows < k_MinimumRowsInTilemapLayerList)
                     {
