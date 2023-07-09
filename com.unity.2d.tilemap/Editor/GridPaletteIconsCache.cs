@@ -30,11 +30,6 @@ namespace UnityEditor.Tilemaps
         /// <returns>A sprite that determines the texture and the coordinates of the icon in that texture.</returns>
         public static Sprite GetIconByPalette(GameObject palette)
         {
-            if (m_cachedIcons == null || m_cachedIcons.Count == 0)
-            {
-                CacheLayers();
-            }
-
             Sprite foundSprite = null;
 
             for(int i = 0; i < m_cachedIcons.Count; ++i)
@@ -92,9 +87,11 @@ namespace UnityEditor.Tilemaps
                 EditorGUIUtility.PingObject(iconsCache);
                 Debug.Log("Created asset at Assets/" + nameof(GridPaletteIconsCache) + ".");
             }
+
+            CachePaletteIcons();
         }
 
-        private static void CacheLayers()
+        public static void CachePaletteIcons()
         {
             string[] foundAssets = AssetDatabase.FindAssets("t:GridPaletteIconsCache");
 
@@ -106,5 +103,9 @@ namespace UnityEditor.Tilemaps
             }
         }
 
+        private void OnEnable()
+        {
+            CachePaletteIcons();
+        }
     }
 }

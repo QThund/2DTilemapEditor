@@ -31,11 +31,6 @@ namespace UnityEditor.Tilemaps
         /// <returns>All the names. It does not allocate memory, the list is cached.</returns>
         public static string[] GetLayerNamesWithNone()
         {
-            if (m_layerNamesWithNone == null || m_layerNamesWithNone.Length == 0)
-            {
-                CacheLayers();
-            }
-
             return m_layerNamesWithNone;
         }
 
@@ -45,11 +40,6 @@ namespace UnityEditor.Tilemaps
         /// <returns>All the names. It does not allocate memory, the list is cached.</returns>
         public static string[] GetLayerNames()
         {
-            if (m_layerNames == null || m_layerNames.Length == 0)
-            {
-                CacheLayers();
-            }
-
             return m_layerNames;
         }
 
@@ -59,15 +49,10 @@ namespace UnityEditor.Tilemaps
         /// <returns>The types of layer. It does not allocate memory, the list is cached.</returns>
         public static TilemapLayer[] GetLayers()
         {
-            if(m_layers == null || m_layers.Length == 0)
-            {
-                CacheLayers();
-            }
-
             return m_layers;
         }
 
-        private static void CacheLayers()
+        public static void CacheLayers()
         {
             string[] foundAssets = AssetDatabase.FindAssets("t:" + nameof(TilemapLayersSettings));
 
@@ -92,6 +77,11 @@ namespace UnityEditor.Tilemaps
             }
         }
 
+        private void OnEnable()
+        {
+            CacheLayers();
+        }
+
         [CustomEditor(typeof(TilemapLayersSettings))]
         private class TilemapLayersSettingsEditor : Editor
         {
@@ -110,7 +100,7 @@ namespace UnityEditor.Tilemaps
 
                         if(GUILayout.Button("Save"))
                         {
-                            m_layers = new TilemapLayer[0];
+                            CacheLayers();
                             Debug.Log("Layers saved!");
                         }
                     }

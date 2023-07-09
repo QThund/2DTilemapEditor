@@ -1173,6 +1173,9 @@ namespace UnityEditor.Tilemaps
             ToolManager.activeToolChanging += ActiveToolChanging;
 
             ShortcutIntegration.instance.contextManager.RegisterToolContext(m_ShortcutContext);
+
+            TilemapLayersSettings.CacheLayers();
+            GridPaletteIconsCache.CachePaletteIcons();
         }
 
         private static void UpdateTooltips(IShortcutProfileManager obj, Identifier identifier, ShortcutBinding oldBinding, ShortcutBinding newBinding)
@@ -1737,33 +1740,23 @@ namespace UnityEditor.Tilemaps
                     int drawnRows = m_tilemapLayers.Count + (grid == null ? 1 
                                                                           : layerTypes.Length);
 
-                    string[] assetPaths = AssetDatabase.FindAssets("t:" + nameof(TilemapLayersSettings));
-
-                    if (drawnRows < k_MinimumRowsInTilemapLayerList &&
-                        assetPaths.Length == 0)
+                    // Select tilemap layers settings button
+                    if (GUILayout.Button(Styles.defineLayerTypes))
                     {
-                        Color previousColor = GUI.backgroundColor;
-                        GUI.backgroundColor = Color.red;
+                        string[] assetPaths = AssetDatabase.FindAssets("t:" + nameof(TilemapLayersSettings));
 
-                        // Create tilemap layers settings button
-                        if (GUILayout.Button(Styles.createTilemapLayerSettings))
+                        if (assetPaths.Length == 0)
                         {
                             TilemapLayersSettings settings = ScriptableObject.CreateInstance<TilemapLayersSettings>();
                             AssetDatabase.CreateAsset(settings, "Assets/" + nameof(TilemapLayersSettings) + ".asset");
                             EditorUtility.SetDirty(settings);
 
                             EditorGUIUtility.PingObject(settings);
+                            Selection.activeObject = settings;
+                            EditorApplication.ExecuteMenuItem("Window/General/Inspector");
                             Debug.Log("Created asset at Assets/" + nameof(TilemapLayersSettings) + ".");
                         }
-
-                        GUI.backgroundColor = previousColor;
-                    }
-                    else
-                    {
-                        EditorGUILayout.Space(-3);
-
-                        // Select tilemap layers settings button
-                        if (GUILayout.Button(Styles.defineLayerTypes, GUILayout.Height(17.0f)))
+                        else
                         {
                             TilemapLayersSettings asset = AssetDatabase.LoadAssetAtPath<TilemapLayersSettings>(AssetDatabase.GUIDToAssetPath(assetPaths[0]));
                             Selection.activeObject = asset;
@@ -1962,6 +1955,7 @@ namespace UnityEditor.Tilemaps
                             if (GUILayout.Button(new GUIContent(buttonText, AdaptPaletteAssetName(GridPalettes.palettes[i].name)), GUILayout.Height(BUTTON_WIDTH), GUILayout.Width(BUTTON_WIDTH)))
                             {
                                 palette = GridPalettes.palettes[i];
+                                GridPaletteIconsCache.CachePaletteIcons();
                             }
 
                             if(palette == GridPalettes.palettes[i])
