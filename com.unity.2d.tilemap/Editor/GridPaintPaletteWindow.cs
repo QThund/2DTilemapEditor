@@ -130,8 +130,8 @@ namespace UnityEditor.Tilemaps
 
             public static readonly GUIContent newLayerAtTopButtonText = EditorGUIUtility.TrTextContent("T", "Inserts a new tilemap layer instance at the top of the layer group of this type.");
             public static readonly GUIContent newLayerAtBottomButtonText = EditorGUIUtility.TrTextContent("B", "Inserts a new tilemap layer instance at the bottom of the layer group of this type.");
-            public static readonly GUIContent moveLayerUpButtonText = EditorGUIUtility.TrTextContent("^", "Increases the sorting order in layer index of the tilemap, moving it upwards in the list.");
-            public static readonly GUIContent moveLayerDownButtonText = EditorGUIUtility.TrTextContent("v", "Reduces the sorting order in layer index of the tilemap, moving it downwards in the list.");
+            public static readonly GUIContent moveLayerUpButtonText = EditorGUIUtility.TrTextContent("\u25B2", "Increases the sorting order in layer index of the tilemap, moving it upwards in the list.");
+            public static readonly GUIContent moveLayerDownButtonText = EditorGUIUtility.TrTextContent("\u25BC", "Reduces the sorting order in layer index of the tilemap, moving it downwards in the list.");
             public static readonly GUIContent createLayerButtonText = EditorGUIUtility.TrTextContent("Create layer", "Creates the instance of a new tilemap layer of the type and with the sorting index determined by the selected tile.");
             public static readonly GUIContent selectTileButtonText = EditorGUIUtility.TrTextContent("Select tile asset", "Selects the asset of the selected tile and shows it in the inspector.");
             public static readonly GUIContent tileLayerSelectionToggleText = EditorGUIUtility.TrTextContent("Tile's layer selection", "When enabled, selecting a tile will automatically focus the layer described in the tile, if it exists.");
@@ -1686,19 +1686,21 @@ namespace UnityEditor.Tilemaps
                                                                    k_TilemapLayerHeaderButtonWidth,
                                                                    labelRect.height);
 
-                                            if (EditorGUI.Button(buttonRect, Styles.moveLayerUpButtonText))
+                                            // Move layer Up button
+                                            if (EditorGUI.Button(buttonRect, Styles.moveLayerUpButtonText, EditorStyles.toolbarButton))
                                             {
                                                 //Undo.RecordObjects(new Object[]{ m_tilemapLayers[i].TilemapInstance.gameObject, m_tilemapLayers[i].TilemapInstance }, "Tilemap layer order change");
                                                 EditorUtility.SetDirty(m_tilemapLayers[layerIndex].TilemapInstance.gameObject);
                                                 m_tilemapLayers[layerIndex].TilemapInstance.sortingOrder = m_tilemapLayers[layerIndex].TilemapInstance.sortingOrder + 1;
                                                 m_tilemapLayers[layerIndex].SortIndex--;
-                                                m_tilemapLayers[layerIndex].TilemapInstance.name = m_tilemapLayers[i].LayerType + "_" + m_tilemapLayers[layerIndex].TilemapInstance.sortingOrder;
+                                                m_tilemapLayers[layerIndex].TilemapInstance.name = m_tilemapLayers[layerIndex].LayerType + "_" + m_tilemapLayers[layerIndex].TilemapInstance.sortingOrder;
                                                 m_cachedActiveTargetsHashCode = 0;
                                             }
 
                                             buttonRect.x = labelRect.x + labelRect.width + k_TilemapLayerHeaderButtonWidth;
 
-                                            if (EditorGUI.Button(buttonRect, Styles.moveLayerDownButtonText))
+                                            // Move layer Down button
+                                            if (EditorGUI.Button(buttonRect, Styles.moveLayerDownButtonText, EditorStyles.toolbarButton))
                                             {
                                                 //Undo.RecordObjects(new Object[]{ m_tilemapLayers[i].TilemapInstance.gameObject, m_tilemapLayers[i].TilemapInstance }, "Tilemap layer order change");
                                                 EditorUtility.SetDirty(m_tilemapLayers[layerIndex].TilemapInstance.gameObject);
