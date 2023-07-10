@@ -505,7 +505,6 @@ namespace UnityEditor.Tilemaps
         
         private void OnGUI()
         {
-            HandleContextMenu();
 
             EditorGUILayout.BeginVertical();
             GUILayout.Space(10f);
@@ -528,6 +527,12 @@ namespace UnityEditor.Tilemaps
             //DoClipboardHeader(position.width);
 
             EditorGUILayout.EndVertical();
+
+            // The context menu only works in the top of the window
+            if(GUILayoutUtility.GetLastRect().Contains(Event.current.mousePosition))
+            {
+                HandleContextMenu();
+            }
 
             EditorGUILayout.BeginVertical();
             const float k_PaletteSelectionAreaHeight = 115.0f;
@@ -1663,12 +1668,32 @@ namespace UnityEditor.Tilemaps
 
                                     EditorGUILayout.BeginHorizontal(GUILayout.Width(k_LayersPanelWidth));
                                     {
-                                        // Checks for a change of selection due to clicking on layer
-                                        GUI.backgroundColor = m_tilemapLayers[layerIndex].IsSelected ? Color.green : previousColor;
-                                        m_tilemapLayers[layerIndex].IsSelected = GUILayout.Toggle(m_tilemapLayers[layerIndex].IsSelected, m_tilemapLayers[layerIndex].TilemapInstance.name, EditorStyles.toolbarButtonLeft, GUILayout.Width(k_LayersPanelWidth - k_TilemapLayerHeaderButtonWidth * 2.0f));
+                                        labelRect = GUILayoutUtility.GetRect(new GUIContent(m_tilemapLayers[layerIndex].TilemapInstance.name), EditorStyles.toolbarButtonLeft, GUILayout.Width(k_LayersPanelWidth - k_TilemapLayerHeaderButtonWidth * 2.0f));
+
+                                        bool isEnabled = m_tilemapLayers[layerIndex].TilemapInstance.gameObject.activeInHierarchy;
+
+                                        // Checks right click, which enables / disables the layer
+                                        if (Event.current.isMouse && 
+                                            Event.current.type == EventType.MouseDown && 
+                                            labelRect.Contains(Event.current.mousePosition) &&
+                                            Event.current.button == 1)
+                                        {
+                                            m_tilemapLayers[layerIndex].TilemapInstance.gameObject.SetActive(!isEnabled);
+                                            Repaint();
+                                        }
+
+                                        // Layer selection button
+                                        GUI.backgroundColor = isEnabled ? m_tilemapLayers[layerIndex].IsSelected ? Color.green 
+                                                                                                                 : previousColor
+                                                                                                     : Color.red;
+                                        if(EditorGUI.Button(labelRect, new GUIContent(m_tilemapLayers[layerIndex].TilemapInstance.name), EditorStyles.toolbarButton))
+                                        {
+                                            m_tilemapLayers[layerIndex].IsSelected = !m_tilemapLayers[layerIndex].IsSelected;
+                                        }
+
                                         GUI.backgroundColor = previousColor;
 
-                                        labelRect = GUILayoutUtility.GetLastRect();
+                                        // Layer buttons
                                         Rect listItemRect = labelRect;
                                         listItemRect.width += k_TilemapLayerHeaderButtonWidth * 2.0f;
 
@@ -1685,6 +1710,8 @@ namespace UnityEditor.Tilemaps
                                                                    labelRect.y,
                                                                    k_TilemapLayerHeaderButtonWidth,
                                                                    labelRect.height);
+
+                                            GUI.backgroundColor = m_tilemapLayers[layerIndex].IsSelected ? Color.green : previousColor;
 
                                             // Move layer Up button
                                             if (EditorGUI.Button(buttonRect, Styles.moveLayerUpButtonText, EditorStyles.toolbarButton))
@@ -1709,6 +1736,8 @@ namespace UnityEditor.Tilemaps
                                                 m_tilemapLayers[layerIndex].TilemapInstance.name = m_tilemapLayers[layerIndex].LayerType + "_" + m_tilemapLayers[layerIndex].TilemapInstance.sortingOrder;
                                                 m_cachedActiveTargetsHashCode = 0;
                                             }
+
+                                            GUI.backgroundColor = previousColor;
                                         }
                                     }
                                     EditorGUILayout.EndHorizontal();

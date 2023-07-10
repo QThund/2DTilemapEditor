@@ -473,7 +473,7 @@ namespace UnityEditor.Tilemaps
             {
                 StageHandle currentStageHandle = StageUtility.GetCurrentStageHandle();
                 return currentStageHandle.FindComponentsOfType<Tilemap>().Where(x => x.gameObject.scene.isLoaded
-                    && x.gameObject.activeInHierarchy).Select(x => x.gameObject).ToArray();
+                    /*&& x.gameObject.activeInHierarchy*/).Select(x => x.gameObject).ToArray();
             }
         }
 
