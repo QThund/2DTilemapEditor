@@ -94,6 +94,34 @@ namespace UnityEngine.Tilemaps
                 EditorGUI.BeginChangeCheck();
                 {
                     tile.sprite = EditorGUILayout.ObjectField(Styles.Sprite, tile.sprite, typeof(Sprite), true) as Sprite;
+
+                    // Shows the sprite in a bigger box with different backgrounds
+                    Rect spriteBigPreviewRect = GUILayoutUtility.GetRect(128, 128, GUILayout.MaxWidth(128), GUILayout.MaxHeight(128));
+                    
+                    EditorGUI.DrawTransparencyCheckerTexture(spriteBigPreviewRect, ScaleMode.ScaleToFit, 1.0f);
+                    GUI.DrawTextureWithTexCoords(spriteBigPreviewRect, tile.sprite.texture, new Rect(tile.sprite.rect.x / tile.sprite.texture.width,
+                                                                                                        tile.sprite.rect.y / tile.sprite.texture.height,
+                                                                                                        tile.sprite.rect.width / tile.sprite.texture.width,
+                                                                                                        tile.sprite.rect.height / tile.sprite.texture.height));
+                    EditorGUI.DrawOutline(spriteBigPreviewRect, 1, Color.green);
+
+                    spriteBigPreviewRect.x += spriteBigPreviewRect.width;
+
+                    EditorGUI.DrawRect(spriteBigPreviewRect, Color.magenta);
+                    GUI.DrawTextureWithTexCoords(spriteBigPreviewRect, tile.sprite.texture, new Rect(tile.sprite.rect.x / tile.sprite.texture.width,
+                                                                                                    tile.sprite.rect.y / tile.sprite.texture.height,
+                                                                                                    tile.sprite.rect.width / tile.sprite.texture.width,
+                                                                                                    tile.sprite.rect.height / tile.sprite.texture.height));
+                    EditorGUI.DrawOutline(spriteBigPreviewRect, 1, Color.green);
+
+                    spriteBigPreviewRect.x += spriteBigPreviewRect.width;
+
+                    EditorGUI.DrawRect(spriteBigPreviewRect, Color.black);
+                    GUI.DrawTextureWithTexCoords(spriteBigPreviewRect, tile.sprite.texture, new Rect(tile.sprite.rect.x / tile.sprite.texture.width,
+                                                                                                    tile.sprite.rect.y / tile.sprite.texture.height,
+                                                                                                    tile.sprite.rect.width / tile.sprite.texture.width,
+                                                                                                    tile.sprite.rect.height / tile.sprite.texture.height));
+                    EditorGUI.DrawOutline(spriteBigPreviewRect, 1, Color.green);
                 }
                 spriteChanged = EditorGUI.EndChangeCheck();
 
