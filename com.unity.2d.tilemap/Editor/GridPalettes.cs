@@ -24,7 +24,7 @@ namespace UnityEditor.Tilemaps
             }
         }
 
-        private void RefreshPalettesCache()
+        public void RefreshPalettesCache()
         {
             if (instance.m_PalettesCache == null)
                 instance.m_PalettesCache = new List<GameObject>();

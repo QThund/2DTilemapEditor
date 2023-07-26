@@ -1960,6 +1960,8 @@ namespace UnityEditor.Tilemaps
 
             if (GridPalettes.palettes.Count == 0)
             {
+                GridPalettes.instance.RefreshPalettesCache();
+
                 Color previousColor = GUI.color;
                 GUI.color = Color.red;
                 EditorGUILayout.LabelField(Styles.noPalettesAvailableText, EditorStyles.toolbarTextField);
