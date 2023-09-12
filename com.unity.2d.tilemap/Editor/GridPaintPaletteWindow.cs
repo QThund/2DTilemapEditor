@@ -686,6 +686,9 @@ namespace UnityEditor.Tilemaps
                         return false;
                     }
                 }
+
+                layerIndex = m_tilemapLayers.Count;
+                return false;
             }
 
             layerIndex = -1;
