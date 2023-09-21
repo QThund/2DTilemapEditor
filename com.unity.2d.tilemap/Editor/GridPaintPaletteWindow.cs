@@ -1992,6 +1992,13 @@ namespace UnityEditor.Tilemaps
                             {
                                 palette = GridPalettes.palettes[i];
                                 GridPaletteIconsCache.CachePaletteIcons();
+
+                                // Right click selects the palette asset
+                                if(Event.current.button == 1)
+                                {
+                                    Selection.activeObject = palette;
+                                    EditorApplication.ExecuteMenuItem("Window/General/Inspector");
+                                }
                             }
 
                             if(palette == GridPalettes.palettes[i])
